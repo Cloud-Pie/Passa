@@ -1,0 +1,5 @@
+.vscode/
+vendor/
+*.log
+build/
+.env
