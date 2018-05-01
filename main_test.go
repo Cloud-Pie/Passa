@@ -1,27 +1,18 @@
 package main
 
+//run go generate first
 import (
-	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	yaml "gopkg.in/yaml.v2"
+	"gitlab.lrz.de/ga53lis/PASSA/ymlparser"
 )
 
 func Test_parseTime(t *testing.T) {
-	var c config
-	statesFile := flag.String("states", defaultYMLFile, "path of yml file")
-	fmt.Println(*statesFile)
-	source, err := ioutil.ReadFile(*statesFile)
-	if err != nil {
-		panic(err)
-	}
-	_ = yaml.Unmarshal(source, &c)
-
+	c := ymlparser.ParseStatesfile("passa-states.yml")
 	layout := "02-01-2006, 15:04:05 MST" //GOLANG's special time thing, cost me 20 mins
 
 	tis, err := time.Parse(layout, c.MyTime)
@@ -57,19 +48,6 @@ func Test_setLogFile(t *testing.T) {
 			}
 		})
 	}
-}
-
-func Test_readYML(t *testing.T) {
-	var c config
-	source, err := ioutil.ReadFile(defaultYMLFile)
-	if err != nil {
-		panic(err)
-	}
-	_ = yaml.Unmarshal(source, &c)
-
-	fmt.Printf("Version: %v\n", c.Version)
-	providerURL = c.ProviderURL
-	fmt.Printf("ProviderURL: %s\n", providerURL)
 }
 
 /*func Test_getCurrentService(t *testing.T) {

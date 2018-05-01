@@ -1,4 +1,4 @@
-package main
+package ymlparser
 
 import (
 	"fmt"
@@ -7,27 +7,28 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-type service struct {
+type Service struct {
 	Name string `json:"Name"`
 	Port int    `json:"Port"`
 }
-type state struct {
+type State struct {
 	Time     string
-	Services []service
+	Services []Service
 	Name     string
 }
 type config struct {
 	Version     string  `yaml:"version"`
-	States      []state `yaml:"states"`
+	States      []State `yaml:"states"`
 	ProviderURL string  `yaml:"providerURL"`
 	MyTime      string  `yaml:"myTime"`
 }
 
 var providerURL string
 
-const timeLayout = "02-01-2006, 15:04:05 MST"
+//TimeLayout is the golang's special time format
+const TimeLayout = "02-01-2006, 15:04:05 MST"
 
-func parseStatesfile(configFile string) *config {
+func ParseStatesfile(configFile string) *config {
 	var c *config
 	source, err := ioutil.ReadFile(configFile)
 	if err != nil {
