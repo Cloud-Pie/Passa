@@ -2,29 +2,11 @@ package main
 
 //run go generate first
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
-
-	"gitlab.lrz.de/ga53lis/PASSA/ymlparser"
 )
 
-func Test_parseTime(t *testing.T) {
-	c := ymlparser.ParseStatesfile("passa-states.yml")
-	layout := "02-01-2006, 15:04:05 MST" //GOLANG's special time thing, cost me 20 mins
-
-	tis, err := time.Parse(layout, c.MyTime)
-
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(tis)
-	fmt.Println(time.Now())
-	duration := tis.Sub(time.Now())
-	fmt.Println(duration.Seconds())
-}
 func Test_setLogFile(t *testing.T) {
 	type args struct {
 		lf string
