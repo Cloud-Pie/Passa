@@ -8,6 +8,19 @@
   version = "v1.0.1"
 
 [[projects]]
+  branch = "master"
+  name = "golang.org/x/crypto"
+  packages = [
+    "curve25519",
+    "ed25519",
+    "ed25519/internal/edwards25519",
+    "internal/chacha20",
+    "poly1305",
+    "ssh"
+  ]
+  revision = "8b1d31080a7692e075c4681cb2458454a1fe0706"
+
+[[projects]]
   name = "gopkg.in/telegram-bot-api.v4"
   packages = ["."]
   revision = "0e0af0c480ea98e982d5f4d45fb39577c6ab1e3e"
@@ -22,6 +35,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "8fb1d5dd02af607aa262c9a0329425fddbf2430f11935b12bd9f510d0cec4b1d"
+  inputs-digest = "d606be16c435da7de0f80ee45f7445d9591154be7ee648a7a82b1b857e3a3d4d"
   solver-name = "gps-cdcl"
   solver-version = 1

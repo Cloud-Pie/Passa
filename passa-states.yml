@@ -1,38 +1,30 @@
 ---
-version: 0.3
-providerURL: "http://localhost:4000"
+version: 0.4
+providerURL: 192.168.99.100
 myTime: 26-04-2018, 21:00:00 CEST # %d-%M-%Y, %H:%M
 states:
   - time: 26-04-2018, 20:06:00 CEST
-    name: state-1 
+    name: state-with-6 
     services:
-      - name: first_server
-        port: 3005
-      - name: second_server
-        port: 3006
+      - name: graf_web
+        scale: 6
 
   - time: 26-04-2018, 20:07:00 CEST
-    name: state-2
+    name: state-with-2
     services:
-      - name: first_server
-        port: 3005
-      - name: second_server
-        port: 3006
-      - name: third_server
-        port: 3007
+      - name: graf_web
+        scale: 2
 
   - time: 26-04-2018, 20:09:00 CEST
-    name: state-3
+    name: state-with-7
     services:
-      - name: first_server
-        port: 3005
-      - name: second_server
-        port: 3006
-  
+      - name: graf_web 
+        scale: 7
+      
   - time: 26-04-2018, 20:11:00 CEST
-    name: state-4 
+    name: state-with-1
     services:
-      - name: first_server
-        port: 3005
+      - name: graf_web
+        scale: 1
 
-##Calculated with autoscaling delay factor.
+        

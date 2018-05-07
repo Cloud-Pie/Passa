@@ -18,7 +18,7 @@ func main() {
 	c := ymlparser.ParseStatesfile(ymlReference)
 	currentTime := time.Now()
 
-	addedMinutes := [4]int{1, 3, 5, 7} //Constant
+	addedMinutes := [4]int{0, 5, 7, 9} //Constant
 
 	for idx := range c.States {
 		timein := currentTime.Local().Add(time.Minute * time.Duration(addedMinutes[idx]))

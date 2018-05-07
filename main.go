@@ -10,24 +10,28 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
+	"gitlab.lrz.de/ga53lis/PASSA/cloudsolution"
 	"gitlab.lrz.de/ga53lis/PASSA/notifier"
 	"gitlab.lrz.de/ga53lis/PASSA/ymlparser"
 )
 
 const (
 	defaultLogFile = "test.log"
-	defaultYMLFile = "passa-states.yml"
+	defaultYMLFile = "test/passa-states-test.yml"
 )
+
+var providerURL string
 
 func main() {
 	var wg sync.WaitGroup
 	c := ymlparser.ParseStatesfile(defaultYMLFile)
 	notifier.InitializeClient() //FIXME: this will definitely change
 	notifier.Notify("Connected to PASSA")
-
+	providerURL = c.ProviderURL
 	wg.Add(len(c.States))
 	currentTime := time.Now()
 
@@ -43,6 +47,7 @@ func main() {
 
 	wg.Wait()
 	fmt.Println("Exiting")
+
 }
 
 func scale(s ymlparser.State, wg *sync.WaitGroup) func() {
@@ -50,8 +55,18 @@ func scale(s ymlparser.State, wg *sync.WaitGroup) func() {
 	return func() {
 		defer wg.Done()
 		log.Println(s.Name)
-		//ensureState(s)
-		notifier.Notify("Deploying " + s.Name)
+		fmt.Printf("%s", cloudsolution.CreateNewMachine("myvm2"))
+
+		newIP := cloudsolution.GetNewMachineIP()
+		fmt.Println(newIP)
+		joinToken := cloudsolution.GetWorkerToken(providerURL)
+		fmt.Println(joinToken)
+		fmt.Println(cloudsolution.AddToSwarm(joinToken, strings.Trim(newIP, "\n"), providerURL))
+
+		for _, service := range s.Services {
+			fmt.Println(cloudsolution.ScaleContainers(providerURL, service.Name, service.Scale))
+			notifier.Notify("Deployed " + s.Name)
+		}
 	}
 }
 

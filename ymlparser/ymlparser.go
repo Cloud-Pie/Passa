@@ -8,8 +8,8 @@ import (
 )
 
 type Service struct {
-	Name string `json:"Name"`
-	Port int    `json:"Port"`
+	Name  string `json:"Name"`
+	Scale string `json:"Scale"`
 }
 type State struct {
 	Time     string

@@ -1,6 +1,13 @@
 # PASSA
 Predictive Auto Scaling Scheduler Application
 
+## To Run:
+`go generate`  
+`go build`  
+`./PASSA`
+
 TODO:
 - .env generator
-- SSH testing
+
+
+**This code is currently in progress, it is not stable.**
