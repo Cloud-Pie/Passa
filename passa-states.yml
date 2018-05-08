@@ -7,13 +7,13 @@ states:
     name: state-with-6 
     services:
       - name: graf_web
-        scale: 6
+        scale: 5
 
   - time: 26-04-2018, 20:07:00 CEST
     name: state-with-2
     services:
       - name: graf_web
-        scale: 2
+        scale: 1
 
   - time: 26-04-2018, 20:09:00 CEST
     name: state-with-7

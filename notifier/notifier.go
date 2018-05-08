@@ -1,3 +1,4 @@
+//Package notifier provides functions for Telegram communication.
 package notifier
 
 import (

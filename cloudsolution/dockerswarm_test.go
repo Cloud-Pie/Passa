@@ -14,10 +14,11 @@ func Test_getWorkerToken(t *testing.T) {
 }
 
 func Test_Integration(t *testing.T) {
-	CreateNewMachine("myvm2")
-	newIP := GetNewMachineIP()
+	newMachineName := "myvm2"
+	CreateNewMachine(newMachineName)
+	newIP := GetNewMachineIP(newMachineName)
 	joinToken := GetWorkerToken(managerIP)
-	fmt.Println(AddToSwarm(joinToken, newIP, managerIP))
+	fmt.Println(AddToSwarm(joinToken, newIP, managerIP, newMachineName))
 
 }
 
@@ -71,8 +72,8 @@ func Test_changeState(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := changeState(tt.args.wantedState); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("changeState() = %v, want %v", got, tt.want)
+			if got := ChangeState(tt.args.wantedState); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ChangeState() = %v, want %v", got, tt.want)
 			}
 		})
 	}

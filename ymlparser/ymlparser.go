@@ -1,3 +1,4 @@
+//Package ymlparser implements structs for yml parsing
 package ymlparser
 
 import (
