@@ -9,11 +9,10 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 
 	"golang.org/x/crypto/ssh"
 )
-
-const machineNAME = "myvm2"
 
 //CreateNewMachine creates a new virtual machine in localhost with virtualbox
 func CreateNewMachine(machineName string) []byte {
@@ -33,13 +32,13 @@ func CreateNewMachine(machineName string) []byte {
 }
 
 //GetNewMachineIP returns the IP of the newly created virtual machine
-func GetNewMachineIP() string {
-	newIP, err := exec.Command("sh", "-c", "docker-machine ip myvm2").Output()
+func GetNewMachineIP(machineName string) string {
+	newIP, err := exec.Command("sh", "-c", "docker-machine ip "+machineName).Output()
 
 	if err != nil {
 		panic(err)
 	}
-	return string(newIP[:])
+	return strings.Trim(string(newIP[:]), "\n")
 }
 
 //GetWorkerToken returns the join token to add worker to the swarm
@@ -81,8 +80,8 @@ func GetWorkerToken(managerIP string) string {
 }
 
 //AddToSwarm add newly created VM to docker swarm
-func AddToSwarm(joinToken string, newMachineIP string, managerIP string) string {
-	keyFile := fmt.Sprintf("%s/.docker/machine/machines/%s/id_rsa", os.Getenv("HOME"), machineNAME)
+func AddToSwarm(joinToken string, newMachineIP string, managerIP string, machineName string) string {
+	keyFile := fmt.Sprintf("%s/.docker/machine/machines/%s/id_rsa", os.Getenv("HOME"), machineName)
 	fmt.Println(keyFile)
 	key, err := ioutil.ReadFile(keyFile)
 
@@ -197,7 +196,8 @@ func listMachines() []string {
 	return machinesList
 }
 
-func changeState(wantedState int) []string {
+//ChangeState changes the state of the system
+func ChangeState(wantedState int) []string {
 
 	currentState := listMachines()
 	difference := len(currentState) - wantedState
@@ -208,15 +208,64 @@ func changeState(wantedState int) []string {
 		for i := 0; i < difference; i++ {
 			lastCompName := currentState[len(currentState)-1]
 			DeleteMachine(lastCompName)
+			RemoveFromSwarm("192.168.99.100", lastCompName)
 			currentState = listMachines()
 		}
 	} else { //difference <0 , lets add some machines
+		var wg sync.WaitGroup
+		wg.Add(-difference)
 		for i := 0; i < -1*difference; i++ {
 			newMachineName := fmt.Sprintf("myvm%v", len(currentState)+1)
-			CreateNewMachine(newMachineName)
-			currentState = listMachines()
+			currentState = append(currentState, newMachineName)
+			go func() {
+				defer wg.Done()
+				CreateNewMachine(newMachineName)
+				newIP := GetNewMachineIP(newMachineName)
+				joinToken := GetWorkerToken("192.168.99.100")
+				AddToSwarm(joinToken, newIP, "192.168.99.100", newMachineName)
+				currentState = listMachines()
+			}()
+
 		}
+		wg.Wait()
 	}
 
 	return currentState
+}
+
+//RemoveFromSwarm removes the node from the manager system
+func RemoveFromSwarm(managerIP string, machineName string) string {
+	keyFile := fmt.Sprintf("%s/.docker/machine/machines/%s/id_rsa", os.Getenv("HOME"), "myvm1")
+	key, err := ioutil.ReadFile(keyFile)
+
+	signer, err := ssh.ParsePrivateKey(key)
+	config := &ssh.ClientConfig{
+		User: "docker",
+		Auth: []ssh.AuthMethod{
+			ssh.PublicKeys(signer),
+		},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //FIXME: fix security
+	}
+
+	fmt.Println(managerIP)
+	client, err := ssh.Dial("tcp", managerIP+":22", config)
+
+	if err != nil {
+		log.Fatal("Failed to dial: ", err)
+	}
+	session, err := client.NewSession()
+
+	if err != nil {
+		log.Fatal("Failed to session: ", err)
+	}
+
+	defer session.Close()
+
+	var b bytes.Buffer
+	session.Stdout = &b
+	if err := session.Run("docker node rm -f " + machineName); err != nil {
+		log.Fatal("Failed to run:" + err.Error())
+	}
+
+	return b.String()
 }
