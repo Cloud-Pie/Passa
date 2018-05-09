@@ -216,22 +216,22 @@ func ChangeState(wantedState int) []string {
 		var wg sync.WaitGroup
 		wg.Add(-difference)
 		for i := 0; i < -1*difference; i++ {
-			newMachineName := fmt.Sprintf("myvm%v", len(currentState)+1)
-			currentState = append(currentState, newMachineName)
+			newMachineName := fmt.Sprintf("myvm%v", len(currentState)+i+1)
+			fmt.Println(newMachineName)
 			go func() {
 				defer wg.Done()
 				CreateNewMachine(newMachineName)
 				newIP := GetNewMachineIP(newMachineName)
 				joinToken := GetWorkerToken("192.168.99.100")
 				AddToSwarm(joinToken, newIP, "192.168.99.100", newMachineName)
-				currentState = listMachines()
+
 			}()
 
 		}
 		wg.Wait()
 	}
 
-	return currentState
+	return listMachines()
 }
 
 //RemoveFromSwarm removes the node from the manager system
