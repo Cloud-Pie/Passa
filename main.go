@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"gitlab.lrz.de/ga53lis/PASSA/cloudsolution"
 	"gitlab.lrz.de/ga53lis/PASSA/notifier"
+	"gitlab.lrz.de/ga53lis/PASSA/server"
 	"gitlab.lrz.de/ga53lis/PASSA/ymlparser"
 )
 
@@ -27,7 +27,7 @@ var providerURL string
 func main() {
 	var wg sync.WaitGroup
 	c := ymlparser.ParseStatesfile(defaultYMLFile)
-	r := gin.Default()
+
 	notifier.InitializeClient() //FIXME: this will definitely change
 	notifier.Notify("Connected to PASSA")
 	providerURL = c.ProviderURL
@@ -44,15 +44,14 @@ func main() {
 		time.AfterFunc(durationUntilStateChange, scale(state, &wg)) //Golang closures
 	}
 
-	go wg.Wait() //TODO: maybe we can remove this all together.
 	fmt.Println("Exiting")
 
 	//Server start
-	r.GET("/ui/states", func(cxt *gin.Context) {
-		cxt.JSON(200, c)
-	})
+	server.StartServer(c)
 
-	r.Run()
+	//So the program doesn't end
+	wg.Wait() //TODO: maybe we can remove this all together.
+
 }
 
 func scale(s ymlparser.State, wg *sync.WaitGroup) func() {

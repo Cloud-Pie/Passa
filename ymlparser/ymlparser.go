@@ -17,7 +17,7 @@ type State struct {
 	Services []Service
 	Name     string
 }
-type config struct {
+type Config struct {
 	Version     string  `yaml:"version"`
 	States      []State `yaml:"states"`
 	ProviderURL string  `yaml:"providerURL"`
@@ -29,8 +29,8 @@ var providerURL string
 //TimeLayout is the golang's special time format
 const TimeLayout = "02-01-2006, 15:04:05 MST"
 
-func ParseStatesfile(configFile string) *config {
-	var c *config
+func ParseStatesfile(configFile string) *Config {
+	var c *Config
 	source, err := ioutil.ReadFile(configFile)
 	if err != nil {
 		panic(err)

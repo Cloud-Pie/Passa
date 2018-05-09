@@ -3,3 +3,5 @@ vendor/
 *.log
 build/
 .env
+PASSA
+.DS_Store

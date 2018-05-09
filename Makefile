@@ -21,3 +21,13 @@ test:
 cover:
 	$(GOTEST) -coverprofile cp.out
 	$(GOCMD) tool cover -html=cp.out
+
+
+run:
+	go generate 
+	go build
+	./PASSA
+
+clean:
+
+	rm PASSA
