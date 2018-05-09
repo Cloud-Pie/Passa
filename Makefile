@@ -12,7 +12,7 @@ compile:
 	$(GOBUILD) -o $(BUILD_DIR)/$(BINARY_NAME)
 
 validate:
-	ruby -e "require 'yaml';YAML.load_file('./passa-states.yml')"
+	$(GOGENERATE) #this also validates the pass-states.yml 
 
 test:
 	$(GOGENERATE)
@@ -22,12 +22,10 @@ cover:
 	$(GOTEST) -coverprofile cp.out
 	$(GOCMD) tool cover -html=cp.out
 
-
 run:
-	go generate 
-	go build
+	make generate
+	$(GOBUILD)
 	./PASSA
 
 clean:
-
-	rm PASSA
+	$(GOCLEAN)
