@@ -19,7 +19,9 @@ var chatID int64
 //InitializeClient creates a new telegram bot
 func InitializeClient() {
 	telegramToken := os.Getenv("telegramToken")
-
+	if telegramToken == "" {
+		return
+	}
 	var err error
 	chatID, err = strconv.ParseInt(os.Getenv("chatID"), 10, 64)
 	if err != nil {

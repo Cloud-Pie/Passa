@@ -20,14 +20,20 @@ import (
 
 //DockerSwarm keeps joinToken and managerIP of the system
 type DockerSwarm struct {
-	joinToken string
-	managerIP string
+	joinToken          string
+	managerIP          string
+	managerMachineName string
 }
+
+const machinePRefix = "myvm"
 
 //NewSwarmManager returns a dockerswarm manager
 func NewSwarmManager(managerIP string) DockerSwarm {
 
-	return DockerSwarm{managerIP: managerIP, joinToken: getWorkerToken(managerIP)}
+	managerName := "myvm1"
+	return DockerSwarm{
+		managerIP: managerIP,
+		joinToken: getWorkerToken(managerIP, managerName), managerMachineName: managerName}
 }
 
 func createNewMachine(machineName string) []byte {
@@ -55,31 +61,9 @@ func getNewMachineIP(machineName string) string {
 	return strings.Trim(string(newIP[:]), "\n")
 }
 
-func getWorkerToken(managerIP string) string {
+func getWorkerToken(managerIP string, managerName string) string {
 
-	keyFile := fmt.Sprintf("%s/.docker/machine/machines/%s/id_rsa", os.Getenv("HOME"), "myvm1")
-	key, err := ioutil.ReadFile(keyFile)
-
-	signer, err := ssh.ParsePrivateKey(key)
-	config := &ssh.ClientConfig{
-		User: "docker",
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(signer),
-		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //FIXME: fix security
-	}
-
-	fmt.Println(managerIP)
-	client, err := ssh.Dial("tcp", managerIP+":22", config)
-
-	if err != nil {
-		log.Fatal("Failed to dial: ", err)
-	}
-	session, err := client.NewSession()
-
-	if err != nil {
-		log.Fatal("Failed to session: ", err)
-	}
+	session := getSSHSession(managerIP, managerName)
 
 	defer session.Close()
 
@@ -92,38 +76,16 @@ func getWorkerToken(managerIP string) string {
 	return b.String()
 }
 
-func addToSwarm(joinToken string, newMachineIP string, managerIP string, machineName string) string {
-	keyFile := fmt.Sprintf("%s/.docker/machine/machines/%s/id_rsa", os.Getenv("HOME"), machineName)
-	fmt.Println(keyFile)
-	key, err := ioutil.ReadFile(keyFile)
+func (ds DockerSwarm) addToSwarm(newMachineIP string, machineName string) string {
 
-	signer, err := ssh.ParsePrivateKey(key)
-	config := &ssh.ClientConfig{
-		User: "docker",
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(signer),
-		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //FIXME: fix security
-	}
-
-	fmt.Println(newMachineIP)
-	client, err := ssh.Dial("tcp", newMachineIP+":22", config)
-
-	if err != nil {
-		log.Fatal("Failed to dial: ", err)
-	}
-	session, err := client.NewSession()
-
-	if err != nil {
-		log.Fatal("Failed to session: ", err)
-	}
+	session := getSSHSession(newMachineIP, machineName)
 
 	defer session.Close()
 
 	var b bytes.Buffer
 
 	session.Stdout = &b
-	swarmCommand := fmt.Sprintf("docker swarm join --token %s %s:2377", strings.Trim(joinToken, "\n"), managerIP)
+	swarmCommand := fmt.Sprintf("docker swarm join --token %s %s:2377", strings.Trim(ds.joinToken, "\n"), ds.managerIP)
 	fmt.Println(swarmCommand)
 	if err := session.Run(swarmCommand); err != nil {
 		log.Fatal("Failed to run:" + err.Error())
@@ -132,31 +94,9 @@ func addToSwarm(joinToken string, newMachineIP string, managerIP string, machine
 	return b.String()
 }
 
-func scaleContainers(managerIP string, containerName string, scaleNum string) string {
-	keyFile := fmt.Sprintf("%s/.docker/machine/machines/%s/id_rsa", os.Getenv("HOME"), "myvm1")
-	key, err := ioutil.ReadFile(keyFile)
+func (ds DockerSwarm) scaleContainers(containerName string, scaleNum string) string {
 
-	signer, err := ssh.ParsePrivateKey(key)
-	config := &ssh.ClientConfig{
-		User: "docker",
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(signer),
-		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //FIXME: fix security
-	}
-
-	fmt.Println(managerIP)
-	client, err := ssh.Dial("tcp", managerIP+":22", config)
-
-	if err != nil {
-		log.Fatal("Failed to dial: ", err)
-	}
-	session, err := client.NewSession()
-
-	if err != nil {
-		log.Fatal("Failed to session: ", err)
-	}
-
+	session := getSSHSession(ds.managerIP, ds.managerMachineName)
 	defer session.Close()
 
 	//var b bytes.Buffer
@@ -226,7 +166,7 @@ func (ds DockerSwarm) ChangeState(wantedState ymlparser.Service) []string {
 			go func() {
 				defer wg.Done()
 				deleteMachine(lastCompName)
-				removeFromSwarm(ds.managerIP, lastCompName)
+				ds.removeFromSwarm(lastCompName)
 			}()
 
 		}
@@ -235,28 +175,42 @@ func (ds DockerSwarm) ChangeState(wantedState ymlparser.Service) []string {
 		var wg sync.WaitGroup
 		wg.Add(-difference)
 		for i := 0; i < -1*difference; i++ {
-			newMachineName := fmt.Sprintf("myvm%v", len(currentState)+i+1)
+			newMachineName := fmt.Sprintf("%s%v", machinePRefix, len(currentState)+i+1)
 			fmt.Println(newMachineName)
 			go func() {
 				defer wg.Done()
 				createNewMachine(newMachineName)
 				newIP := getNewMachineIP(newMachineName)
 
-				addToSwarm(ds.joinToken, newIP, ds.managerIP, newMachineName)
+				ds.addToSwarm(newIP, newMachineName)
 
 			}()
 
 		}
 		wg.Wait()
-		scaleContainers(ds.managerIP, wantedState.Name, wantedState.Scale)
+		ds.scaleContainers(wantedState.Name, wantedState.Scale)
 
 	}
 
 	return listMachines()
 }
 
-func removeFromSwarm(managerIP string, machineName string) string {
-	keyFile := fmt.Sprintf("%s/.docker/machine/machines/%s/id_rsa", os.Getenv("HOME"), "myvm1")
+func (ds DockerSwarm) removeFromSwarm(machineName string) string {
+
+	session := getSSHSession(ds.managerIP, ds.managerMachineName)
+	defer session.Close()
+
+	var b bytes.Buffer
+	session.Stdout = &b
+	if err := session.Run("docker node rm -f " + machineName); err != nil {
+		log.Fatal("Failed to run:" + err.Error())
+	}
+
+	return b.String()
+}
+
+func getSSHSession(machineIP string, machineName string) *ssh.Session {
+	keyFile := fmt.Sprintf("%s/.docker/machine/machines/%s/id_rsa", os.Getenv("HOME"), machineName)
 	key, err := ioutil.ReadFile(keyFile)
 
 	signer, err := ssh.ParsePrivateKey(key)
@@ -268,8 +222,7 @@ func removeFromSwarm(managerIP string, machineName string) string {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //FIXME: fix security
 	}
 
-	fmt.Println(managerIP)
-	client, err := ssh.Dial("tcp", managerIP+":22", config)
+	client, err := ssh.Dial("tcp", machineIP+":22", config)
 
 	if err != nil {
 		log.Fatal("Failed to dial: ", err)
@@ -280,13 +233,5 @@ func removeFromSwarm(managerIP string, machineName string) string {
 		log.Fatal("Failed to session: ", err)
 	}
 
-	defer session.Close()
-
-	var b bytes.Buffer
-	session.Stdout = &b
-	if err := session.Run("docker node rm -f " + machineName); err != nil {
-		log.Fatal("Failed to run:" + err.Error())
-	}
-
-	return b.String()
+	return session
 }

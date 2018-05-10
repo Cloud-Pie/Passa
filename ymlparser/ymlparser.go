@@ -4,6 +4,7 @@ package ymlparser
 import (
 	"fmt"
 	"io/ioutil"
+	"time"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -16,12 +17,12 @@ type State struct {
 	Time     string
 	Services []Service
 	Name     string
+	ISODate  time.Time
 }
 type Config struct {
 	Version     string  `yaml:"version"`
 	States      []State `yaml:"states"`
 	ProviderURL string  `yaml:"providerURL"`
-	MyTime      string  `yaml:"myTime"`
 }
 
 var providerURL string
@@ -29,6 +30,7 @@ var providerURL string
 //TimeLayout is the golang's special time format
 const TimeLayout = "02-01-2006, 15:04:05 MST"
 
+//ParseStatesfile parses the states file according to configuration.
 func ParseStatesfile(configFile string) *Config {
 	var c *Config
 	source, err := ioutil.ReadFile(configFile)
@@ -40,6 +42,14 @@ func ParseStatesfile(configFile string) *Config {
 		panic(err)
 	}
 	fmt.Printf("Version %v\n", c.Version)
+
+	for idx := range c.States {
+		isoTimeFormat, err := time.Parse(TimeLayout, c.States[idx].Time)
+		if err != nil {
+			panic(err)
+		}
+		c.States[idx].ISODate = isoTimeFormat
+	}
 
 	return c
 }

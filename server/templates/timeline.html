@@ -1,0 +1,74 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>Timeline | PASSA</title>
+
+  <style>
+    body, html {
+      font-family: arial, sans-serif;
+      font-size: 11pt;
+    }
+    input {
+      margin: 2px 0;
+    }
+  </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css" rel="stylesheet" type="text/css" />
+  
+</head>
+<body>
+
+<p>
+  <input type="button" id="fit" value="Fit all items"><br> 
+  <input type="button" id="currentSelection" value="Focus current selection"><br>
+</p>
+
+
+<div id="visualization"></div>
+
+<script>
+  // create a dataset with items
+  // we specify the type of the fields `start` and `end` here to be strings
+  // containing an ISO date. The fields will be outputted as ISO dates
+  // automatically getting data from the DataSet via items.get().
+  var items = new vis.DataSet({
+    type: { start: 'ISODate', end: 'ISODate' }
+  });
+
+  
+
+  var container = document.getElementById('visualization');
+  var options = {
+    //start: '2014-01-10',
+    //end: '2014-02-10',
+    editable: true,
+    showCurrentTime: true
+  };
+
+  
+  document.getElementById('fit').onclick = function() {
+    timeline.fit();
+  };
+  document.getElementById('currentSelection').onclick = function() {
+    var selection = timeline.getSelection();
+    timeline.focus(selection);
+  };
+  
+
+{{range .States}}
+    new_item={
+        start:{{.ISODate}},
+        content: {{.Name}},
+
+    }
+    items.add(new_item)
+    console.log(new_item)
+{{end}}
+
+
+var timeline = new vis.Timeline(container, items, options); //Set the timeline
+</script>
+</body>
+</html>

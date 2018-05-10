@@ -1,31 +1,35 @@
-//Package server provides routes for web interface
 package server
 
 import (
-	"fmt"
-
 	"github.com/gin-gonic/gin"
 	"gitlab.lrz.de/ga53lis/PASSA/ymlparser"
 )
 
-//StartServer starts the web interface server
-func StartServer(c *ymlparser.Config) *gin.Engine {
+//SetupServer setups the web interface server
+func SetupServer(c *ymlparser.Config) *gin.Engine {
 	r := gin.Default()
+	r.LoadHTMLGlob("templates/*")
+
 	r.GET("/ui/states", func(ctx *gin.Context) {
 		ctx.JSON(200, c)
 	})
 
 	r.GET("/", func(ctx *gin.Context) {
-		htmlToSend := "<html><body><ul>"
-		for _, rt := range r.Routes() {
-			htmlToSend += fmt.Sprintf("<li><a href=\"%s\">%s</a>", rt.Path, rt.Path)
-		}
 
-		htmlToSend += "</ul></body></html>"
-		ctx.Data(200, "text/html; charset=utf-8", []byte(htmlToSend))
+		ctx.HTML(200, "index.html", gin.H{
+			"Links": r.Routes(),
+		})
 	})
 
-	go r.Run() //NOTE: there is also a go here
+	r.GET("/ui/timeline", func(ctx *gin.Context) {
 
+		ctx.HTML(200, "timeline.html", c)
+	})
 	return r
+}
+
+func main() {
+	c := ymlparser.ParseStatesfile("../test/passa-states-test.yml")
+	r := SetupServer(c)
+	r.Run()
 }

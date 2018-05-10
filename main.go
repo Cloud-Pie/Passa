@@ -35,19 +35,15 @@ func main() {
 
 	for _, state := range c.States {
 
-		predictedTime, err := time.Parse(ymlparser.TimeLayout, state.Time)
-		if err != nil {
-			panic(err)
-		}
-		durationUntilStateChange := predictedTime.Sub(currentTime)
+		durationUntilStateChange := state.ISODate.Sub(currentTime)
 		time.AfterFunc(durationUntilStateChange, scale(cloudManager, state, &wg)) //Golang closures
 	}
 
 	fmt.Println("Exiting")
 
 	//Server start
-	server.StartServer(c)
-
+	server := server.SetupServer(c)
+	server.Run()
 	//So the program doesn't end
 	wg.Wait() //TODO: maybe we can remove this all together.
 

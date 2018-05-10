@@ -9,19 +9,11 @@ import (
 )
 
 const managerIP = "192.168.99.100"
+const managerName = "myvm1"
 
 func Test_getWorkerToken(t *testing.T) {
 
-	fmt.Println(getWorkerToken(managerIP))
-}
-
-func Test_Integration(t *testing.T) {
-	newMachineName := "myvm2"
-	createNewMachine(newMachineName)
-	newIP := getNewMachineIP(newMachineName)
-	joinToken := getWorkerToken(managerIP)
-	fmt.Println(addToSwarm(joinToken, newIP, managerIP, newMachineName))
-
+	fmt.Println(getWorkerToken(managerIP, managerName))
 }
 
 func Test_createNewMachine(t *testing.T) {
