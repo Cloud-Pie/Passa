@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 	"sync"
 	"time"
 
@@ -27,10 +26,10 @@ var providerURL string
 func main() {
 	var wg sync.WaitGroup
 	c := ymlparser.ParseStatesfile(defaultYMLFile)
-
 	notifier.InitializeClient() //FIXME: this will definitely change
 	notifier.Notify("Connected to PASSA")
 	providerURL = c.ProviderURL
+	cloudManager := cloudsolution.NewSwarmManager(providerURL)
 	wg.Add(len(c.States))
 	currentTime := time.Now()
 
@@ -41,7 +40,7 @@ func main() {
 			panic(err)
 		}
 		durationUntilStateChange := predictedTime.Sub(currentTime)
-		time.AfterFunc(durationUntilStateChange, scale(state, &wg)) //Golang closures
+		time.AfterFunc(durationUntilStateChange, scale(cloudManager, state, &wg)) //Golang closures
 	}
 
 	fmt.Println("Exiting")
@@ -54,17 +53,13 @@ func main() {
 
 }
 
-func scale(s ymlparser.State, wg *sync.WaitGroup) func() {
+func scale(manager cloudsolution.CloudManager, s ymlparser.State, wg *sync.WaitGroup) func() {
 
 	return func() {
 		defer wg.Done()
 		for _, service := range s.Services {
-			scaleInt, err := strconv.Atoi(service.Scale)
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println(cloudsolution.ChangeState(scaleInt))
-			cloudsolution.ScaleContainers(providerURL, service.Name, service.Scale)
+
+			fmt.Println(manager.ChangeState(service))
 
 			notifier.Notify("Deployed " + s.Name)
 		}
