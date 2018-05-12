@@ -14,7 +14,7 @@ type Service struct {
 	Scale string `json:"Scale"`
 }
 type State struct {
-	Time     string
+	Time     string `json:"time"`
 	Services []Service
 	Name     string
 	ISODate  time.Time
