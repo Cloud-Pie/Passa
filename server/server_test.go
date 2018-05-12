@@ -268,3 +268,9 @@ func Test_test(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/test", bytes.NewBuffer(jsonState))
 	r.ServeHTTP(w, req)
 }
+
+func TestRoutes(t *testing.T) {
+	c := ymlparser.ParseStatesfile("../test/passa-states-test.yml")
+	r := SetupServer(c)
+	fmt.Printf("%v", r.Routes())
+}

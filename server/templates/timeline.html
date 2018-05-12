@@ -28,6 +28,8 @@
 
 <div id="visualization"></div>
 
+<h4 id="state"></h4>
+<ul id="myList"></ul>
 <script>
   // create a dataset with items
   // we specify the type of the fields `start` and `end` here to be strings
@@ -56,19 +58,40 @@
     timeline.focus(selection);
   };
   
-
 {{range .States}}
+    
     new_item={
         start:{{.ISODate}},
         content: {{.Name}},
-
+        services: {{.Services}} 
     }
     items.add(new_item)
     console.log(new_item)
+   
 {{end}}
 
 
 var timeline = new vis.Timeline(container, items, options); //Set the timeline
+
+timeline.on('select', function (properties) {
+  
+  selectedState=items.get(properties.items[0]);
+  console.log(selectedState);
+  title=document.getElementById("state");
+  title.innerText=selectedState.content;
+
+  myList=document.getElementById("myList");
+  myList.innerText=""
+  selectedState.services.forEach(element => {
+    
+  var entry = document.createElement('li');
+  entry.appendChild(document.createTextNode(element.Name+" : "+element.Scale));
+  myList.appendChild(entry);
+  });
+
+});
+
+
 </script>
 </body>
 </html>

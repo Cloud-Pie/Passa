@@ -4,8 +4,8 @@
 </head>
 <body>
     <ul>
-        {{range .Links}}
-            <li><a href="{{.Path}}">{{.Path}}</a></li>
+        {{range .}}
+            <li>{{.Method}} ==> <a href="{{.Path}}">{{.Path}}</a></li>
         {{end}}
     </ul>
 </body>

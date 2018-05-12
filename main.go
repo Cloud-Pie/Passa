@@ -3,6 +3,7 @@ package main
 //go:generate go run internal/generate/ymlGenerator.go
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -21,32 +22,41 @@ const (
 	defaultYMLFile = "test/passa-states-test.yml"
 )
 
-var providerURL string
-
 func main() {
+
+	flagVars := parseFlags()
 	var wg sync.WaitGroup
 	c := ymlparser.ParseStatesfile(defaultYMLFile)
+
+	//Notifier code Start
 	notifier.InitializeClient() //FIXME: this will definitely change
 	notifier.Notify("Connected to PASSA")
-	providerURL = c.ProviderURL
-	cloudManager := cloudsolution.NewSwarmManager(providerURL)
-	wg.Add(len(c.States))
-	currentTime := time.Now()
+	//Notifier code End
 
-	for _, state := range c.States {
+	//Code For Cloud Management Start
 
-		durationUntilStateChange := state.ISODate.Sub(currentTime)
-		time.AfterFunc(durationUntilStateChange, scale(cloudManager, state, &wg)) //Golang closures
+	if !flagVars.noCloud {
+		cloudManager := cloudsolution.NewSwarmManager(c.ProviderURL)
+
+		for _, state := range c.States {
+
+			durationUntilStateChange := state.ISODate.Sub(time.Now())
+
+			if durationUntilStateChange < 0 {
+				log.Printf("Duration already passed:%v", durationUntilStateChange)
+			} else {
+				time.AfterFunc(durationUntilStateChange, scale(cloudManager, state, &wg)) //Golang closures
+				wg.Add(1)
+			}
+		}
+		//Code For Cloud Management End
 	}
-
-	fmt.Println("Exiting")
-
-	//Server start
+	//Server code Start
 	server := server.SetupServer(c)
 	server.Run()
-	//So the program doesn't end
-	wg.Wait() //TODO: maybe we can remove this all together.
+	//Server code End
 
+	wg.Wait() //TODO: maybe we can remove this all together.
 }
 
 func scale(manager cloudsolution.CloudManager, s ymlparser.State, wg *sync.WaitGroup) func() {
@@ -74,4 +84,16 @@ func setLogFile(lf string) string {
 	}
 	log.SetOutput(f)
 	return lf
+}
+
+type flagVariable struct {
+	noCloud bool
+}
+
+func parseFlags() flagVariable {
+	noCloud := flag.Bool("no-cloud", false, "Don't start cloud management")
+	flag.Parse()
+	return flagVariable{
+		noCloud: *noCloud,
+	}
 }

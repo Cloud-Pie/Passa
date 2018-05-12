@@ -8,8 +8,10 @@ BINARY_NAME=passa
 BUILD_DIR=build
 BINARY_UNIX=$(BINARY_NAME)_unix
 
+.PHONY: all test clean server
+
 compile:
-	$(GOBUILD) -o $(BUILD_DIR)/$(BINARY_NAME)
+	$(GOBUILD)
 
 validate:
 	$(GOGENERATE) #this also validates the pass-states.yml 
@@ -29,3 +31,9 @@ run:
 
 clean:
 	$(GOCLEAN)
+
+server:
+	make validate
+	make compile
+	./PASSA --no-cloud
+

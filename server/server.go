@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,14 +14,15 @@ var config *ymlparser.Config
 //SetupServer setups the web interface server
 func SetupServer(c *ymlparser.Config) *gin.Engine {
 	r := gin.Default()
-	r.LoadHTMLGlob("templates/*")
+	//d, _ := os.Getwd()
+
+	goPath := os.Getenv("GOPATH")
+	r.LoadHTMLGlob(goPath + "/src/gitlab.lrz.de/ga53lis/PASSA/server/templates/*")
 	config = c
 
 	r.GET("/", func(ctx *gin.Context) {
 
-		ctx.HTML(200, "index.html", gin.H{
-			"Links": r.Routes(),
-		})
+		ctx.HTML(200, "index.html", r.Routes())
 	})
 
 	r.GET("/ui/timeline", func(ctx *gin.Context) {
