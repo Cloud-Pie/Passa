@@ -59,7 +59,7 @@ func main() {
 	wg.Wait() //TODO: maybe we can remove this all together.
 }
 
-func scale(manager cloudsolution.CloudManager, s ymlparser.State, wg *sync.WaitGroup) func() {
+func scale(manager cloudsolution.CloudManager /*Interface*/, s ymlparser.State, wg *sync.WaitGroup) func() {
 
 	return func() {
 		defer wg.Done()
@@ -89,14 +89,18 @@ func setLogFile(lf string) string {
 type flagVariable struct {
 	noCloud    bool
 	configFile string
+	logFile    string
 }
 
 func parseFlags() flagVariable {
 	noCloud := flag.Bool("no-cloud", false, "Don't start cloud management")
 	configFile := flag.String("state-file", defaultYMLFile, "config file")
+	logFile := flag.String("test-file", defaultLogFile, "log file")
+
 	flag.Parse()
 	return flagVariable{
 		noCloud:    *noCloud,
 		configFile: *configFile,
+		logFile:    *logFile,
 	}
 }

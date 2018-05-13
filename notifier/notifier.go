@@ -9,10 +9,6 @@ import (
 	"gopkg.in/telegram-bot-api.v4"
 )
 
-//Notifier takes telegram's telegramToken and chatID
-//TelegramToken is token of Atakan's Bot
-//ChatID is chat id between Atakan and atakan's bot
-
 var bot *tgbotapi.BotAPI
 var chatID int64
 
