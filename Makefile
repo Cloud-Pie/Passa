@@ -17,8 +17,9 @@ validate:
 	$(GOGENERATE) #this also validates the pass-states.yml 
 
 test:
-	$(GOGENERATE)
-	$(GOTEST) -v
+	go generate
+	go clean -testcache
+	go test ./...  -cover
 
 cover:
 	$(GOTEST) -coverprofile cp.out

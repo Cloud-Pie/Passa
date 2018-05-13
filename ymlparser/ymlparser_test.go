@@ -14,3 +14,32 @@ func TestParseTime(t *testing.T) {
 	}
 	fmt.Printf("%s\n%s", jsTimeFormat, jsTimeFormat.Format(time.RFC3339))
 }
+
+func TestSetTimer(t *testing.T) {
+	s := State{
+		Name: "testState",
+		Time: "18-08-2018, 20:00:00 CEST",
+	}
+
+	s.ISODate, _ = time.Parse(TimeLayout, s.Time)
+	myTimer := time.AfterFunc(s.ISODate.Sub(time.Now()), func() {
+		fmt.Println("something something")
+	})
+	s.SetTimer(myTimer)
+	fmt.Printf("%+v", s)
+	s.Time = "18-08-2019, 21:00:00 CEST"
+	s.ISODate, _ = time.Parse(TimeLayout, s.Time)
+	myNewTimer := time.AfterFunc(s.ISODate.Sub(time.Now()), func() {
+		fmt.Println("something something")
+	})
+
+	s.SetTimer(myNewTimer)
+	fmt.Printf("%+v", s)
+}
+
+func TestParseStateFile(t *testing.T) {
+	c := ParseStatesfile("../test/passa-states-test.yml")
+	if c.Version != "0.5" {
+		t.Fail()
+	}
+}

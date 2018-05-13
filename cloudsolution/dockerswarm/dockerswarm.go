@@ -1,5 +1,5 @@
-//Package cloudsolution provides function for docker swarm
-package cloudsolution
+//Package dockerswarm provides function for docker swarm
+package dockerswarm
 
 import (
 	"bufio"
@@ -141,6 +141,10 @@ func listMachines() []string {
 	if err != nil {
 		panic(err)
 	}
+	if len(out) == 0 {
+		return []string{}
+	}
+
 	machinesList := strings.Split(strings.Trim(string(out[:]), "\n"), "\n")
 
 	return machinesList

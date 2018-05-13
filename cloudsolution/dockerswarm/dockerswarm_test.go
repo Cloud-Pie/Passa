@@ -1,4 +1,4 @@
-package cloudsolution
+package dockerswarm
 
 import (
 	"fmt"
@@ -12,32 +12,43 @@ const managerIP = "192.168.99.100"
 const managerName = "myvm1"
 
 func Test_getWorkerToken(t *testing.T) {
-
+	if len(listMachines()) == 0 {
+		t.Skip("No manager to get token")
+	}
 	fmt.Println(getWorkerToken(managerIP, managerName))
 }
 
 func Test_createNewMachine(t *testing.T) {
+	if len(listMachines()) == 0 {
+		t.Skip("No machine present")
+	}
 	fmt.Printf("%s", createNewMachine("myvm2"))
 }
 func Test_deleteMachine(t *testing.T) {
+	if len(listMachines()) < 2 {
+		t.Skip("No machine to delete")
+	}
 	mn := "myvm2"
 	fmt.Printf("%s", deleteMachine(mn))
 }
 
 func Test_listMachines(t *testing.T) {
-	fmt.Printf("%s", listMachines())
-	fmt.Printf("%v", len(listMachines()))
+	machines := listMachines()
+	fmt.Printf("%v", machines)
+
+	fmt.Printf("%v", len(machines))
 
 }
 
 func Test_changeState(t *testing.T) {
 
 	//setup system
-	ds := NewSwarmManager("192.168.99.100")
+
 	//this test assumes two Vm's present so
 	if len(listMachines()) != 2 {
 		t.Skip("This test requires two machines to be present")
 	}
+	ds := NewSwarmManager("192.168.99.100")
 	type args struct {
 		wantedState ymlparser.Service
 	}

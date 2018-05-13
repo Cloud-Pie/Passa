@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"gitlab.lrz.de/ga53lis/PASSA/database"
 	"gitlab.lrz.de/ga53lis/PASSA/ymlparser"
 )
 
@@ -55,7 +56,7 @@ func createState(c *gin.Context) {
 
 	if newState.Time == "" || newState.Services == nil { //input validation
 		c.JSON(422, gin.H{
-			"error": "Fields are empty",
+			"error": "Time or service field is empty",
 		})
 	} else {
 		isoTimeFormat, err := time.Parse(ymlparser.TimeLayout, newState.Time)
@@ -71,11 +72,12 @@ func createState(c *gin.Context) {
 
 }
 func getAllStates(c *gin.Context) {
+	fmt.Printf("%+v", config.States)
 	c.JSON(200, config.States)
 }
 func getSingleState(c *gin.Context) {
 	name := c.Params.ByName("name")
-	postToReturn := searchQuery(config.States, name)
+	postToReturn := database.SearchQuery(config.States, name)
 	if postToReturn == -1 {
 		c.JSON(422, gin.H{"error": "Not Found!"})
 
@@ -90,7 +92,7 @@ func updateState(c *gin.Context) {
 	var updatedState ymlparser.State
 	c.BindJSON(&updatedState)
 	fmt.Printf("%v", updatedState)
-	posToUpdate := searchQuery(config.States, name)
+	posToUpdate := database.SearchQuery(config.States, name)
 	if posToUpdate == -1 {
 		c.JSON(422, gin.H{"error": "Not Found"})
 	} else {
@@ -108,7 +110,7 @@ func updateState(c *gin.Context) {
 }
 func deleteState(c *gin.Context) {
 	name := c.Params.ByName("name")
-	postToDelete := searchQuery(config.States, name)
+	postToDelete := database.SearchQuery(config.States, name)
 	if postToDelete == -1 { //Not Found
 		c.JSON(422, gin.H{"error": "Not Found"})
 	} else {
@@ -117,14 +119,4 @@ func deleteState(c *gin.Context) {
 		config.States = config.States[:len(config.States)-1]
 		c.JSON(200, config.States)
 	}
-}
-
-func searchQuery(currentStates []ymlparser.State, searchName string) int {
-
-	for idx := range currentStates {
-		if currentStates[idx].Name == searchName {
-			return idx
-		}
-	}
-	return -1
 }

@@ -4,7 +4,7 @@ import (
 	"gitlab.lrz.de/ga53lis/PASSA/ymlparser"
 )
 
-//CloudManager is the interface for cloud management system
-type CloudManager interface {
+//CloudManagerInterface is the interface for cloud management system
+type CloudManagerInterface interface {
 	ChangeState(ymlparser.Service) []string
 }

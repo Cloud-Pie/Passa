@@ -9,16 +9,22 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+//Service keeps the name and scale of the scaled service.
 type Service struct {
-	Name  string `json:"Name"`
-	Scale string `json:"Scale"`
+	Name  string
+	Scale string
 }
+
+//State is the metadata of the state expected to scale to.
 type State struct {
-	Time     string `json:"time"`
+	Time     string
 	Services []Service
 	Name     string
 	ISODate  time.Time
+	timer    *time.Timer
 }
+
+//Config provides data of the cloud infrastructure.
 type Config struct {
 	Version     string  `yaml:"version"`
 	States      []State `yaml:"states"`
@@ -52,4 +58,13 @@ func ParseStatesfile(configFile string) *Config {
 	}
 
 	return c
+}
+
+//SetTimer sets the private timer variable
+func (s *State) SetTimer(t *time.Timer) {
+	if s.timer != nil {
+		dur := s.ISODate.Sub(time.Now())
+		s.timer.Reset(dur)
+	}
+	s.timer = t
 }

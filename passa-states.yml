@@ -22,5 +22,8 @@ states:
   services:
   - name: graf_web
     scale: "1"
+
+  - name: graf_mysql
+    scale: "9"
   name: state-with-1
 

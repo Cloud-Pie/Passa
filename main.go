@@ -11,8 +11,16 @@ import (
 	"sync"
 	"time"
 
+	"gitlab.lrz.de/ga53lis/PASSA/cloudsolution/dockerswarm"
+
+	"gitlab.lrz.de/ga53lis/PASSA/notification/consolePrint"
+
+	"gitlab.lrz.de/ga53lis/PASSA/notification"
+
+	"gitlab.lrz.de/ga53lis/PASSA/notification/telegram"
+
 	"gitlab.lrz.de/ga53lis/PASSA/cloudsolution"
-	"gitlab.lrz.de/ga53lis/PASSA/notifier"
+
 	"gitlab.lrz.de/ga53lis/PASSA/server"
 	"gitlab.lrz.de/ga53lis/PASSA/ymlparser"
 )
@@ -22,35 +30,44 @@ const (
 	defaultYMLFile = "test/passa-states-test.yml"
 )
 
+var notifier notification.NotifierInterface
+var flagVars flagVariable
+
 func main() {
 
-	flagVars := parseFlags()
+	var err error
+	flagVars = parseFlags()
 	var wg sync.WaitGroup
 	c := ymlparser.ParseStatesfile(flagVars.configFile)
 
 	//Notifier code Start
-	notifier.InitializeClient() //FIXME: this will definitely change
-	notifier.Notify("Connected to PASSA")
+	notifier, err = telegram.InitializeClient()
+
+	if err != nil {
+		notifier = consoleprinter.InitializeClient()
+	}
 	//Notifier code End
 
 	//Code For Cloud Management Start
 
+	var cloudManager cloudsolution.CloudManagerInterface
 	if !flagVars.noCloud {
-		cloudManager := cloudsolution.NewSwarmManager(c.ProviderURL)
-
-		for _, state := range c.States {
-
-			durationUntilStateChange := state.ISODate.Sub(time.Now())
-
-			if durationUntilStateChange < 0 {
-				log.Printf("Duration already passed:%v", durationUntilStateChange)
-			} else {
-				time.AfterFunc(durationUntilStateChange, scale(cloudManager, state, &wg)) //Golang closures
-				wg.Add(1)
-			}
-		}
-		//Code For Cloud Management End
+		cloudManager = dockerswarm.NewSwarmManager(c.ProviderURL)
 	}
+
+	for idx := range c.States {
+
+		durationUntilStateChange := c.States[idx].ISODate.Sub(time.Now())
+
+		deploymentTimer := time.AfterFunc(durationUntilStateChange, scale(cloudManager, c.States[idx], &wg)) //Golang closures
+		c.States[idx].SetTimer(deploymentTimer)
+		fmt.Printf("Deployment: %v\n", c.States[idx])
+
+		wg.Add(1)
+
+	}
+	//Code For Cloud Management End
+
 	//Server code Start
 	server := server.SetupServer(c)
 	server.Run()
@@ -59,14 +76,15 @@ func main() {
 	wg.Wait() //TODO: maybe we can remove this all together.
 }
 
-func scale(manager cloudsolution.CloudManager /*Interface*/, s ymlparser.State, wg *sync.WaitGroup) func() {
+func scale(manager cloudsolution.CloudManagerInterface, s ymlparser.State, wg *sync.WaitGroup) func() {
 
 	return func() {
 		defer wg.Done()
 		for _, service := range s.Services {
 
-			fmt.Println(manager.ChangeState(service))
-
+			if !flagVars.noCloud {
+				fmt.Println(manager.ChangeState(service))
+			}
 			notifier.Notify("Deployed " + s.Name)
 		}
 	}
