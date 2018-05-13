@@ -16,7 +16,6 @@ func TestSearchQuery(t *testing.T) {
 		args args
 		want int
 	}{
-		// TODO: Add test cases.
 		{
 			name: "Find in Config",
 			args: args{

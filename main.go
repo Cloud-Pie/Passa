@@ -57,11 +57,12 @@ func main() {
 
 	for idx := range c.States {
 
-		durationUntilStateChange := c.States[idx].ISODate.Sub(time.Now())
+		state := &c.States[idx]
+		durationUntilStateChange := state.ISODate.Sub(time.Now())
 
-		deploymentTimer := time.AfterFunc(durationUntilStateChange, scale(cloudManager, c.States[idx], &wg)) //Golang closures
-		c.States[idx].SetTimer(deploymentTimer)
-		fmt.Printf("Deployment: %v\n", c.States[idx])
+		deploymentTimer := time.AfterFunc(durationUntilStateChange, scale(cloudManager, state, &wg)) //Golang closures
+		state.SetTimer(deploymentTimer)
+		fmt.Printf("Deployment: %v\n", state)
 
 		wg.Add(1)
 
@@ -76,7 +77,7 @@ func main() {
 	wg.Wait() //TODO: maybe we can remove this all together.
 }
 
-func scale(manager cloudsolution.CloudManagerInterface, s ymlparser.State, wg *sync.WaitGroup) func() {
+func scale(manager cloudsolution.CloudManagerInterface, s *ymlparser.State, wg *sync.WaitGroup) func() {
 
 	return func() {
 		defer wg.Done()
