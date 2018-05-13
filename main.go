@@ -26,7 +26,7 @@ func main() {
 
 	flagVars := parseFlags()
 	var wg sync.WaitGroup
-	c := ymlparser.ParseStatesfile(defaultYMLFile)
+	c := ymlparser.ParseStatesfile(flagVars.configFile)
 
 	//Notifier code Start
 	notifier.InitializeClient() //FIXME: this will definitely change
@@ -87,13 +87,16 @@ func setLogFile(lf string) string {
 }
 
 type flagVariable struct {
-	noCloud bool
+	noCloud    bool
+	configFile string
 }
 
 func parseFlags() flagVariable {
 	noCloud := flag.Bool("no-cloud", false, "Don't start cloud management")
+	configFile := flag.String("state-file", defaultYMLFile, "config file")
 	flag.Parse()
 	return flagVariable{
-		noCloud: *noCloud,
+		noCloud:    *noCloud,
+		configFile: *configFile,
 	}
 }
