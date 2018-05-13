@@ -59,12 +59,10 @@ func main() {
 
 		state := &c.States[idx]
 		durationUntilStateChange := state.ISODate.Sub(time.Now())
-
+		wg.Add(1)
 		deploymentTimer := time.AfterFunc(durationUntilStateChange, scale(cloudManager, state, &wg)) //Golang closures
 		state.SetTimer(deploymentTimer)
 		fmt.Printf("Deployment: %v\n", state)
-
-		wg.Add(1)
 
 	}
 	//Code For Cloud Management End
