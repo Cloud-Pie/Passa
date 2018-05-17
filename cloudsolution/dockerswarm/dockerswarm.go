@@ -9,7 +9,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -25,19 +24,33 @@ type DockerSwarm struct {
 	managerMachineName string
 }
 
-const machinePRefix = "myvm"
+//machinePrefix makes sure all our machines have names like myvm1, myvm2, myvm3.
+const (
+	machinePrefix           = "myvm"
+	managerName             = "myvm1"
+	createNewMachineCommand = "docker-machine create --driver virtualbox %s"
+	deleteMachineCommand    = "docker-machine rm %s -y"
+	getIPCommand            = "docker-machine ip %s"
+	getWorkerTokenCommand   = "docker swarm join-token --quiet worker"
+	joinWorkerCommand       = "docker swarm join --token %s %s:2377"
+	scaleServiceCommand     = "docker service scale %s=%v"
+	listMachineCommand      = "docker-machine ls -q"
+	removeFromSwarmCommand  = "docker node rm -f %s"
+	dockerKeyLocation       = "%s/.docker/machine/machines/%s/id_rsa"
+)
 
 //NewSwarmManager returns a dockerswarm manager
 func NewSwarmManager(managerIP string) DockerSwarm {
 
-	managerName := "myvm1"
 	return DockerSwarm{
-		managerIP: managerIP,
-		joinToken: getWorkerToken(managerIP, managerName), managerMachineName: managerName}
+		managerIP:          managerIP,
+		joinToken:          getWorkerToken(managerIP, managerName),
+		managerMachineName: managerName}
 }
 
+//CreateNewMachine creates new machine with the docker-machine command.
 func createNewMachine(machineName string) []byte {
-	cmd := exec.Command("sh", "-c", "docker-machine create --driver virtualbox "+machineName)
+	cmd := exec.Command("sh", "-c", fmt.Sprintf(createNewMachineCommand, machineName))
 
 	stdout, _ := cmd.StdoutPipe()
 	cmd.Start()
@@ -52,8 +65,9 @@ func createNewMachine(machineName string) []byte {
 	return out
 }
 
+//getNewMachineIP returns the IP of the asked machine.
 func getNewMachineIP(machineName string) string {
-	newIP, err := exec.Command("sh", "-c", "docker-machine ip "+machineName).Output()
+	newIP, err := exec.Command("sh", "-c", fmt.Sprintf(getIPCommand, machineName)).Output()
 
 	if err != nil {
 		panic(err)
@@ -61,6 +75,7 @@ func getNewMachineIP(machineName string) string {
 	return strings.Trim(string(newIP[:]), "\n")
 }
 
+//getWorkerToken returns the worker token required to join the swarm
 func getWorkerToken(managerIP string, managerName string) string {
 
 	session := getSSHSession(managerIP, managerName)
@@ -69,13 +84,14 @@ func getWorkerToken(managerIP string, managerName string) string {
 
 	var b bytes.Buffer
 	session.Stdout = &b
-	if err := session.Run("docker swarm join-token --quiet worker"); err != nil {
+	if err := session.Run(getWorkerTokenCommand); err != nil {
 		log.Fatal("Failed to run:" + err.Error())
 	}
 
 	return b.String()
 }
 
+//addToSwarm add newly created vm to docker swarm
 func (ds DockerSwarm) addToSwarm(newMachineIP string, machineName string) string {
 
 	session := getSSHSession(newMachineIP, machineName)
@@ -85,7 +101,7 @@ func (ds DockerSwarm) addToSwarm(newMachineIP string, machineName string) string
 	var b bytes.Buffer
 
 	session.Stdout = &b
-	swarmCommand := fmt.Sprintf("docker swarm join --token %s %s:2377", strings.Trim(ds.joinToken, "\n"), ds.managerIP)
+	swarmCommand := fmt.Sprintf(joinWorkerCommand, strings.Trim(ds.joinToken, "\n"), ds.managerIP)
 	fmt.Println(swarmCommand)
 	if err := session.Run(swarmCommand); err != nil {
 		log.Fatal("Failed to run:" + err.Error())
@@ -94,7 +110,8 @@ func (ds DockerSwarm) addToSwarm(newMachineIP string, machineName string) string
 	return b.String()
 }
 
-func (ds DockerSwarm) scaleContainers(containerName string, scaleNum string) string {
+//scaleContainers give command to manager to scale the services.
+func (ds DockerSwarm) scaleContainers(serviceName string, scaleNum int) string {
 
 	session := getSSHSession(ds.managerIP, ds.managerMachineName)
 	defer session.Close()
@@ -103,7 +120,7 @@ func (ds DockerSwarm) scaleContainers(containerName string, scaleNum string) str
 	//session.Stdout = &b
 	stdout, _ := session.StdoutPipe()
 
-	scalingCommand := fmt.Sprintf("docker service scale %s=%s", containerName, scaleNum)
+	scalingCommand := fmt.Sprintf(scaleServiceCommand, serviceName, scaleNum)
 
 	if err := session.Start(scalingCommand); err != nil {
 		log.Fatal("Failed to run:" + err.Error())
@@ -119,8 +136,9 @@ func (ds DockerSwarm) scaleContainers(containerName string, scaleNum string) str
 	return ""
 }
 
+//deleteMachine deletes the machine.
 func deleteMachine(machineName string) []byte {
-	cmd := exec.Command("sh", "-c", "docker-machine rm "+machineName+" -y")
+	cmd := exec.Command("sh", "-c", fmt.Sprintf(deleteMachineCommand, machineName))
 
 	stdout, _ := cmd.StdoutPipe()
 	cmd.Start()
@@ -135,8 +153,10 @@ func deleteMachine(machineName string) []byte {
 	return out
 }
 
+//listMachines lists currently created machines.
+//It assumes that all the machines created are running.
 func listMachines() []string {
-	cmd := exec.Command("sh", "-c", "docker-machine ls -q")
+	cmd := exec.Command("sh", "-c", listMachineCommand)
 	out, err := cmd.Output()
 	if err != nil {
 		panic(err)
@@ -151,14 +171,16 @@ func listMachines() []string {
 }
 
 //ChangeState changes the state of the system
-func (ds DockerSwarm) ChangeState(wantedState ymlparser.Service) []string {
+func (ds DockerSwarm) ChangeState(wantedState ymlparser.State) []string {
 
-	currentState := listMachines()
-	scaleInt, err := strconv.Atoi(wantedState.Scale)
-	if err != nil {
-		panic(err)
+	//BUG: This is just a work around
+	totalVM := 0
+	for idx := range wantedState.VMs {
+		totalVM += wantedState.VMs[idx].Scale
 	}
-	difference := len(currentState) - scaleInt
+	//Scale machines
+	currentState := listMachines()
+	difference := len(currentState) - totalVM
 	fmt.Println(difference)
 	if difference == 0 { //keep the state as is
 		return currentState
@@ -179,7 +201,7 @@ func (ds DockerSwarm) ChangeState(wantedState ymlparser.Service) []string {
 		var wg sync.WaitGroup
 		wg.Add(-difference)
 		for i := 0; i < -1*difference; i++ {
-			newMachineName := fmt.Sprintf("%s%v", machinePRefix, len(currentState)+i+1)
+			newMachineName := fmt.Sprintf("%s%v", machinePrefix, len(currentState)+i+1)
 			fmt.Println(newMachineName)
 			go func() {
 				defer wg.Done()
@@ -192,13 +214,16 @@ func (ds DockerSwarm) ChangeState(wantedState ymlparser.Service) []string {
 
 		}
 		wg.Wait()
-		ds.scaleContainers(wantedState.Name, wantedState.Scale)
-
+		//Scale containers
+		for _, service := range wantedState.Services {
+			ds.scaleContainers(service.Name, service.Scale)
+		}
 	}
 
 	return listMachines()
 }
 
+//removeFromSwarm removes the deleted vm from swarm
 func (ds DockerSwarm) removeFromSwarm(machineName string) string {
 
 	session := getSSHSession(ds.managerIP, ds.managerMachineName)
@@ -206,15 +231,16 @@ func (ds DockerSwarm) removeFromSwarm(machineName string) string {
 
 	var b bytes.Buffer
 	session.Stdout = &b
-	if err := session.Run("docker node rm -f " + machineName); err != nil {
+	if err := session.Run(fmt.Sprintf(removeFromSwarmCommand, machineName)); err != nil {
 		log.Fatal("Failed to run:" + err.Error())
 	}
 
 	return b.String()
 }
 
+//getSSHSession returns the SSH session to the machine with machineName and MachineIP.
 func getSSHSession(machineIP string, machineName string) *ssh.Session {
-	keyFile := fmt.Sprintf("%s/.docker/machine/machines/%s/id_rsa", os.Getenv("HOME"), machineName)
+	keyFile := fmt.Sprintf(dockerKeyLocation, os.Getenv("HOME"), machineName)
 	key, err := ioutil.ReadFile(keyFile)
 
 	signer, err := ssh.ParsePrivateKey(key)

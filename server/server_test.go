@@ -63,7 +63,7 @@ func Test_createState(t *testing.T) {
 			stateToUpdate: ymlparser.State{
 				Time:     "18-08-2018, 20:00:00 CEST",
 				Name:     "test-State",
-				Services: append([]ymlparser.Service{}, ymlparser.Service{Name: "test-service", Scale: "10"}),
+				Services: append([]ymlparser.Service{}, ymlparser.Service{Name: "test-service", Scale: 10}),
 			},
 			returnedCode: 200,
 		},
@@ -87,7 +87,7 @@ func Test_createState(t *testing.T) {
 			stateToUpdate: ymlparser.State{
 				Time:     "dummy time",
 				Name:     "test-State",
-				Services: append([]ymlparser.Service{}, ymlparser.Service{Name: "test-service", Scale: "10"}),
+				Services: append([]ymlparser.Service{}, ymlparser.Service{Name: "test-service", Scale: 10}),
 			},
 			returnedCode: 422,
 		},

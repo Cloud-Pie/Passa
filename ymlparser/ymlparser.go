@@ -12,13 +12,20 @@ import (
 //Service keeps the name and scale of the scaled service.
 type Service struct {
 	Name  string
-	Scale string
+	Scale int
+}
+
+//VM keeps the type and scale of virtual machines.
+type VM struct {
+	Type  string
+	Scale int
 }
 
 //State is the metadata of the state expected to scale to.
 type State struct {
 	Time     string
 	Services []Service
+	VMs      []VM
 	Name     string
 	ISODate  time.Time
 	timer    *time.Timer
@@ -26,9 +33,12 @@ type State struct {
 
 //Config provides data of the cloud infrastructure.
 type Config struct {
-	Version     string  `yaml:"version"`
-	States      []State `yaml:"states"`
-	ProviderURL string  `yaml:"providerURL"`
+	Version  string  `yaml:"version"`
+	States   []State `yaml:"states"`
+	Provider struct {
+		Name      string
+		ManagerIP string `yaml:"managerIP"`
+	} `yaml:"provider"`
 }
 
 var providerURL string
@@ -46,6 +56,7 @@ func ParseStatesfile(configFile string) *Config {
 	err = yaml.Unmarshal(source, &c)
 	if err != nil {
 		panic(err)
+
 	}
 	fmt.Printf("Version %v\n", c.Version)
 

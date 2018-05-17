@@ -6,5 +6,5 @@ import (
 
 //CloudManagerInterface is the interface for cloud management system
 type CloudManagerInterface interface {
-	ChangeState(ymlparser.Service) []string
+	ChangeState(ymlparser.State) []string
 }

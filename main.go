@@ -52,7 +52,9 @@ func main() {
 
 	var cloudManager cloudsolution.CloudManagerInterface
 	if !flagVars.noCloud {
-		cloudManager = dockerswarm.NewSwarmManager(c.ProviderURL)
+		if c.Provider.Name == "docker-swarm" {
+			cloudManager = dockerswarm.NewSwarmManager(c.Provider.ManagerIP)
+		}
 	}
 
 	for idx := range c.States {
@@ -79,13 +81,11 @@ func scale(manager cloudsolution.CloudManagerInterface, s *ymlparser.State, wg *
 
 	return func() {
 		defer wg.Done()
-		for _, service := range s.Services {
-
-			if !flagVars.noCloud {
-				fmt.Println(manager.ChangeState(service))
-			}
-			notifier.Notify("Deployed " + s.Name)
+		if !flagVars.noCloud {
+			fmt.Println(manager.ChangeState(*s))
 		}
+		notifier.Notify("Deployed " + s.Name)
+
 	}
 }
 

@@ -31,10 +31,14 @@ run:
 	./PASSA
 
 clean:
-	$(GOCLEAN)
+	$(GOCLEAN) -testcache
 
 server:
 	make validate
 	make compile
 	./PASSA --no-cloud
+
+dist:
+	env GOOS=linux GOARCH=amd64 go build -o build/passa_linux
+	go build -o build/passa_mac
 

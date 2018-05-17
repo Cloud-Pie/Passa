@@ -9,7 +9,6 @@ import (
 )
 
 const managerIP = "192.168.99.100"
-const managerName = "myvm1"
 
 func Test_getWorkerToken(t *testing.T) {
 	if len(listMachines()) == 0 {
@@ -40,7 +39,7 @@ func Test_listMachines(t *testing.T) {
 
 }
 
-func Test_changeState(t *testing.T) {
+func TestChangeState(t *testing.T) {
 
 	//setup system
 
@@ -50,7 +49,7 @@ func Test_changeState(t *testing.T) {
 	}
 	ds := NewSwarmManager("192.168.99.100")
 	type args struct {
-		wantedState ymlparser.Service
+		wantedState ymlparser.State
 	}
 	tests := []struct {
 		name string
@@ -60,19 +59,28 @@ func Test_changeState(t *testing.T) {
 		{
 			name: "same state",
 			args: args{
-				wantedState: ymlparser.Service{Name: "graf_web", Scale: "2"},
+				wantedState: ymlparser.State{
+					Services: []ymlparser.Service{{Name: "vote_vote", Scale: 2}},
+					VMs:      []ymlparser.VM{{Type: "medium", Scale: 2}},
+				},
 			},
 			want: []string{"myvm1", "myvm2"},
 		}, {
 			name: "add new machine",
 			args: args{
-				wantedState: ymlparser.Service{Name: "graf_web", Scale: "3"},
+				wantedState: ymlparser.State{
+					Services: []ymlparser.Service{{Name: "vote_vote", Scale: 2}},
+					VMs:      []ymlparser.VM{{Type: "medium", Scale: 3}},
+				},
 			},
 			want: []string{"myvm1", "myvm2", "myvm3"},
 		}, {
 			name: "remove machine",
 			args: args{
-				wantedState: ymlparser.Service{Name: "graf_web", Scale: "2"},
+				wantedState: ymlparser.State{
+					Services: []ymlparser.Service{{Name: "vote_vote", Scale: 2}},
+					VMs:      []ymlparser.VM{{Type: "medium", Scale: 2}},
+				},
 			},
 			want: []string{"myvm1", "myvm2"},
 		},
