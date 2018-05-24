@@ -28,7 +28,7 @@ cover:
 run:
 	make generate
 	$(GOBUILD)
-	./PASSA
+	./Passa
 
 clean:
 	$(GOCLEAN) -testcache
@@ -36,7 +36,7 @@ clean:
 server:
 	make validate
 	make compile
-	./PASSA --no-cloud
+	./Passa --no-cloud
 
 dist:
 	env GOOS=linux GOARCH=amd64 go build -o build/passa_linux

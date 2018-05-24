@@ -18,7 +18,7 @@ func SetupServer(c *ymlparser.Config) *gin.Engine {
 	//d, _ := os.Getwd()
 
 	goPath := os.Getenv("GOPATH")
-	r.LoadHTMLGlob(goPath + "/src/github.com/Cloud-Pie/PASSA/server/templates/*")
+	r.LoadHTMLGlob(goPath + "/src/github.com/Cloud-Pie/Passa/server/templates/*")
 	config = c
 
 	r.GET("/", func(ctx *gin.Context) {

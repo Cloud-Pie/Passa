@@ -52,13 +52,13 @@
     "poly1305",
     "ssh"
   ]
-  revision = "94e3fad7f1b4eed4ec147751ad6b4c4d33f00611"
+  revision = "159ae71589f303f9fbfd7528413e0fe944b9c1cb"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "d0faeb539838e250bd0a9db4182d48d4a1915181"
+  revision = "04b83988a018ef3ebffe1485df79d6499b76a4b4"
 
 [[projects]]
   name = "gopkg.in/go-playground/validator.v8"
@@ -81,6 +81,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "20adc8e198d5375d4f7a9d2119c5cb4ee6ec9271442e8a89af1f8de70e3f76f1"
+  inputs-digest = "3fa759933efff44045e41055dc69e1ee5ec6307befbf7d307fa15195a605001f"
   solver-name = "gps-cdcl"
   solver-version = 1
