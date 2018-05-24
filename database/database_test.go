@@ -3,7 +3,7 @@ package database
 import (
 	"testing"
 
-	"gitlab.lrz.de/ga53lis/PASSA/ymlparser"
+	"github.com/Cloud-Pie/Passa/ymlparser"
 )
 
 func TestSearchQuery(t *testing.T) {

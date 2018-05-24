@@ -5,9 +5,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/Cloud-Pie/Passa/database"
+	"github.com/Cloud-Pie/Passa/ymlparser"
 	"github.com/gin-gonic/gin"
-	"gitlab.lrz.de/ga53lis/PASSA/database"
-	"gitlab.lrz.de/ga53lis/PASSA/ymlparser"
 )
 
 var config *ymlparser.Config
@@ -18,7 +18,7 @@ func SetupServer(c *ymlparser.Config) *gin.Engine {
 	//d, _ := os.Getwd()
 
 	goPath := os.Getenv("GOPATH")
-	r.LoadHTMLGlob(goPath + "/src/gitlab.lrz.de/ga53lis/PASSA/server/templates/*")
+	r.LoadHTMLGlob(goPath + "/src/github.com/Cloud-Pie/PASSA/server/templates/*")
 	config = c
 
 	r.GET("/", func(ctx *gin.Context) {

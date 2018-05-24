@@ -1,8 +1,6 @@
 package cloudsolution
 
-import (
-	"gitlab.lrz.de/ga53lis/PASSA/ymlparser"
-)
+import "github.com/Cloud-Pie/Passa/ymlparser"
 
 //CloudManagerInterface is the interface for cloud management system
 type CloudManagerInterface interface {

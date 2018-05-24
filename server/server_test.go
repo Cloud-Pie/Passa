@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"gitlab.lrz.de/ga53lis/PASSA/ymlparser"
+	"github.com/Cloud-Pie/Passa/ymlparser"
 )
 
 func TestSetupServer(t *testing.T) {

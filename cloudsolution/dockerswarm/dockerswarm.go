@@ -12,8 +12,7 @@ import (
 	"strings"
 	"sync"
 
-	"gitlab.lrz.de/ga53lis/PASSA/ymlparser"
-
+	"github.com/Cloud-Pie/Passa/ymlparser"
 	"golang.org/x/crypto/ssh"
 )
 

@@ -6,9 +6,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/Cloud-Pie/Passa/ymlparser"
 	"gopkg.in/yaml.v2"
-
-	"gitlab.lrz.de/ga53lis/PASSA/ymlparser"
 )
 
 const ymlReference = "passa-states.yml"

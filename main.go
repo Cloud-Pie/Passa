@@ -11,18 +11,13 @@ import (
 	"sync"
 	"time"
 
-	"gitlab.lrz.de/ga53lis/PASSA/cloudsolution/dockerswarm"
-
-	"gitlab.lrz.de/ga53lis/PASSA/notification/consolePrint"
-
-	"gitlab.lrz.de/ga53lis/PASSA/notification"
-
-	"gitlab.lrz.de/ga53lis/PASSA/notification/telegram"
-
-	"gitlab.lrz.de/ga53lis/PASSA/cloudsolution"
-
-	"gitlab.lrz.de/ga53lis/PASSA/server"
-	"gitlab.lrz.de/ga53lis/PASSA/ymlparser"
+	"github.com/Cloud-Pie/Passa/cloudsolution"
+	"github.com/Cloud-Pie/Passa/cloudsolution/dockerswarm"
+	"github.com/Cloud-Pie/Passa/notification"
+	"github.com/Cloud-Pie/Passa/notification/consoleprinter"
+	"github.com/Cloud-Pie/Passa/notification/telegram"
+	"github.com/Cloud-Pie/Passa/server"
+	"github.com/Cloud-Pie/Passa/ymlparser"
 )
 
 const (
