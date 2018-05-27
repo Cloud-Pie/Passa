@@ -3,7 +3,6 @@ package server
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/Cloud-Pie/Passa/database"
 	"github.com/Cloud-Pie/Passa/ymlparser"
@@ -43,9 +42,8 @@ func SetupServer(c *ymlparser.Config) *gin.Engine {
 	r.POST("/test", func(c *gin.Context) {
 		var myState ymlparser.State
 		c.BindJSON(&myState)
-		myState.ISODate, _ = time.Parse(ymlparser.TimeLayout, myState.Time)
 		fmt.Printf("%v", myState)
-		c.JSON(200, gin.H{"ok": "ok"})
+		c.JSON(200, myState)
 	})
 	return r
 }
@@ -54,23 +52,18 @@ func createState(c *gin.Context) {
 	var newState ymlparser.State
 	c.BindJSON(&newState)
 
-	if newState.Time == "" || newState.Services == nil { //input validation
+	if newState.ISODate.IsZero() || newState.Services == nil { //input validation
 		c.JSON(422, gin.H{
 			"error": "Time or service field is empty",
 		})
 	} else {
-		isoTimeFormat, err := time.Parse(ymlparser.TimeLayout, newState.Time)
-		if err != nil {
-			defer c.JSON(422, gin.H{"error": "Cannot parse Time"})
-			panic(err)
-
-		}
-		newState.ISODate = isoTimeFormat
 		config.States = append(config.States, newState)
-		c.JSON(200, config.States)
+		c.JSON(200, gin.H{
+			"data": "success",
+		})
 	}
-
 }
+
 func getAllStates(c *gin.Context) {
 	fmt.Printf("%+v", config.States)
 	c.JSON(200, config.States)
@@ -96,17 +89,13 @@ func updateState(c *gin.Context) {
 	if posToUpdate == -1 {
 		c.JSON(422, gin.H{"error": "Not Found"})
 	} else {
-		isoTimeFormat, err := time.Parse(ymlparser.TimeLayout, updatedState.Time)
-		if err != nil {
-			defer c.JSON(422, gin.H{"error": "Cannot parse Time"})
-			panic(err)
 
-		}
-		updatedState.ISODate = isoTimeFormat
 		config.States[posToUpdate] = updatedState
 
-		c.JSON(200, config.States)
+		c.JSON(200, config.States[posToUpdate])
+
 	}
+
 }
 func deleteState(c *gin.Context) {
 	name := c.Params.ByName("name")
@@ -117,6 +106,6 @@ func deleteState(c *gin.Context) {
 		config.States[postToDelete] = config.States[len(config.States)-1]
 		config.States[len(config.States)-1] = ymlparser.State{}
 		config.States = config.States[:len(config.States)-1]
-		c.JSON(200, config.States)
+		c.JSON(200, gin.H{"data": "success"})
 	}
 }

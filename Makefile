@@ -32,6 +32,7 @@ run:
 
 clean:
 	$(GOCLEAN) -testcache
+	rm build/*
 
 server:
 	make validate

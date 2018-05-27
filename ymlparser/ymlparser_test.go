@@ -7,28 +7,24 @@ import (
 )
 
 func TestParseTime(t *testing.T) {
-	timeString := "10-05-2018, 23:51:50 CEST"
-	jsTimeFormat, err := time.Parse(TimeLayout, timeString)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("%s\n%s", jsTimeFormat, jsTimeFormat.Format(time.RFC3339))
+
+	jsTimeFormat := time.Now().Format(time.RFC822)
+
+	fmt.Printf("%s\n", jsTimeFormat)
 }
 
 func TestSetTimer(t *testing.T) {
 	s := State{
-		Name: "testState",
-		Time: "18-08-2018, 20:00:00 CEST",
+		Name:    "testState",
+		ISODate: time.Now().Add(time.Hour * time.Duration(2)), //after 2 hours
 	}
 
-	s.ISODate, _ = time.Parse(TimeLayout, s.Time)
 	myTimer := time.AfterFunc(s.ISODate.Sub(time.Now()), func() {
 		fmt.Println("something something")
 	})
 	s.SetTimer(myTimer)
 	fmt.Printf("%+v", s)
-	s.Time = "18-08-2019, 21:00:00 CEST"
-	s.ISODate, _ = time.Parse(TimeLayout, s.Time)
+	s.ISODate = time.Now().Add(time.Hour * 24 * 365 * time.Duration(1))
 	myNewTimer := time.AfterFunc(s.ISODate.Sub(time.Now()), func() {
 		fmt.Println("something something")
 	})
@@ -42,7 +38,40 @@ func TestParseStateFile(t *testing.T) {
 	if c.Version != "0.6" {
 		t.Fail()
 	}
-	if c.Provider.Name != "docker-swarm" {
-		t.Fail()
+}
+
+func TestState_getReadableTime(t *testing.T) {
+	type fields struct {
+		Services []Service
+		VMs      []VM
+		Name     string
+		ISODate  time.Time
+		timer    *time.Timer
+	}
+	myTime := time.Now()
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		// TODO: Add test cases.
+		{
+			name: "Valid Time",
+			fields: fields{
+				ISODate: myTime,
+			},
+			want: myTime.Format(time.RFC822),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := State{
+
+				ISODate: tt.fields.ISODate,
+			}
+			if got := s.getReadableTime(); got != tt.want {
+				t.Errorf("State.getReadableTime() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

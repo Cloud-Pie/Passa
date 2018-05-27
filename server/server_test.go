@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/Cloud-Pie/Passa/ymlparser"
 )
@@ -61,7 +62,7 @@ func Test_createState(t *testing.T) {
 		{
 			name: "Valid State",
 			stateToUpdate: ymlparser.State{
-				Time:     "18-08-2018, 20:00:00 CEST",
+				ISODate:  time.Now(),
 				Name:     "test-State",
 				Services: append([]ymlparser.Service{}, ymlparser.Service{Name: "test-service", Scale: 10}),
 			},
@@ -77,20 +78,20 @@ func Test_createState(t *testing.T) {
 		{
 			name: "Invalid State without Service",
 			stateToUpdate: ymlparser.State{
-				Name: "Invalid State",
-				Time: "18-08-2018, 20:00:00 CEST",
+				Name:    "Invalid State",
+				ISODate: time.Now(),
 			},
 			returnedCode: 422,
 		},
-		{
+		/*{
 			name: "Valid State with Invalid Time",
 			stateToUpdate: ymlparser.State{
-				Time:     "dummy time",
+				ISODate:  "dummy iso string",
 				Name:     "test-State",
 				Services: append([]ymlparser.Service{}, ymlparser.Service{Name: "test-service", Scale: 10}),
 			},
 			returnedCode: 422,
-		},
+		},*/
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -106,6 +107,9 @@ func Test_createState(t *testing.T) {
 			}
 
 			if w.Code == http.StatusOK {
+				w = httptest.NewRecorder()
+				req, _ = http.NewRequest("GET", "/api/states/", nil)
+				r.ServeHTTP(w, req)
 				var returnedData []ymlparser.State
 				json.Unmarshal(w.Body.Bytes(), &returnedData)
 				if stateNum+1 != len(returnedData) {
@@ -166,8 +170,8 @@ func Test_updateState(t *testing.T) {
 		{
 			name: "Existing State To Update",
 			stateToUpdate: ymlparser.State{
-				Time: "18-08-2019, 15:45:33 CEST",
-				Name: "update State",
+				ISODate: time.Now(),
+				Name:    "update State",
 			},
 			returnedCode: 200,
 			stateName:    "state-with-7",
@@ -175,20 +179,20 @@ func Test_updateState(t *testing.T) {
 		{
 			name: "Non Existing State To Update",
 			stateToUpdate: ymlparser.State{
-				Time: "18-08-2019, 15:45:33 CEST",
-				Name: "Non existent State",
+				ISODate: time.Now(),
+				Name:    "Non existent State",
 			},
 			returnedCode: 422,
 			stateName:    "non-existent",
-		},
-		{name: "Existing State To Update with Invalid Time",
-			stateToUpdate: ymlparser.State{
-				Time: "dummy time",
-				Name: "state-with-dummy-time",
-			},
-			returnedCode: 422,
-			stateName:    "state-with-6",
-		},
+		}, /*
+			{name: "Existing State To Update with Invalid Time",
+				stateToUpdate: ymlparser.State{
+					Time: "dummy time",
+					Name: "state-with-dummy-time",
+				},
+				returnedCode: 422,
+				stateName:    "state-with-6",
+			},*/
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -242,10 +246,14 @@ func Test_deleteState(t *testing.T) {
 			}
 
 			if w.Code == 200 {
+				w = httptest.NewRecorder()
+				req, _ := http.NewRequest("GET", "/api/states/", nil)
+				r.ServeHTTP(w, req)
+
 				var returnedData []ymlparser.State
 				json.Unmarshal(w.Body.Bytes(), &returnedData)
-				if tt.returnedLength != len(returnedData) {
-					t.Errorf("want: %v\ngot: %v\n", tt.returnedLength, len(returnedData))
+				if len(returnedData) != tt.returnedLength {
+					t.Fail()
 				}
 			}
 		})
@@ -256,21 +264,16 @@ func Test_test(t *testing.T) {
 	c := ymlparser.ParseStatesfile("../test/passa-states-test.yml")
 	r := SetupServer(c)
 	w := httptest.NewRecorder()
+	myTime := time.Now()
 	myState := ymlparser.State{
-		Time: "18-08-1994, 20:00:00 CEST",
-		Name: "myState",
+		ISODate: myTime,
+		Name:    "myTestState",
 	}
 	jsonState, err := json.Marshal(myState)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("%s", jsonState)
 	req, _ := http.NewRequest("POST", "/test", bytes.NewBuffer(jsonState))
 	r.ServeHTTP(w, req)
-}
 
-func TestRoutes(t *testing.T) {
-	c := ymlparser.ParseStatesfile("../test/passa-states-test.yml")
-	r := SetupServer(c)
-	fmt.Printf("%v", r.Routes())
 }

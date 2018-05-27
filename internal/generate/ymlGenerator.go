@@ -21,7 +21,7 @@ func main() {
 
 	for idx := range c.States {
 		timein := currentTime.Local().Add(time.Hour * 24 * 30 * time.Duration(addedMinutes[idx]))
-		c.States[idx].Time = timein.Format(ymlparser.TimeLayout)
+		c.States[idx].ISODate = timein
 	}
 	fmt.Printf("%v", c)
 

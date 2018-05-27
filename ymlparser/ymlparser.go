@@ -23,7 +23,6 @@ type VM struct {
 
 //State is the metadata of the state expected to scale to.
 type State struct {
-	Time     string
 	Services []Service
 	VMs      []VM
 	Name     string
@@ -44,7 +43,6 @@ type Config struct {
 var providerURL string
 
 //TimeLayout is the golang's special time format
-const TimeLayout = "02-01-2006, 15:04:05 MST"
 
 //ParseStatesfile parses the states file according to configuration.
 func ParseStatesfile(configFile string) *Config {
@@ -60,14 +58,6 @@ func ParseStatesfile(configFile string) *Config {
 	}
 	fmt.Printf("Version %v\n", c.Version)
 
-	for idx := range c.States {
-		isoTimeFormat, err := time.Parse(TimeLayout, c.States[idx].Time)
-		if err != nil {
-			panic(err)
-		}
-		c.States[idx].ISODate = isoTimeFormat
-	}
-
 	return c
 }
 
@@ -78,4 +68,8 @@ func (s *State) SetTimer(t *time.Timer) {
 		s.timer.Reset(dur)
 	}
 	s.timer = t
+}
+
+func (s State) getReadableTime() string {
+	return time.Now().Format(time.RFC822)
 }
