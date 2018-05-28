@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/Cloud-Pie/Passa/cloudsolution"
@@ -32,7 +31,6 @@ func main() {
 
 	var err error
 	flagVars = parseFlags()
-	var wg sync.WaitGroup
 	c := ymlparser.ParseStatesfile(flagVars.configFile)
 
 	//Notifier code Start
@@ -56,8 +54,7 @@ func main() {
 
 		state := &c.States[idx]
 		durationUntilStateChange := state.ISODate.Sub(time.Now())
-		wg.Add(1)
-		deploymentTimer := time.AfterFunc(durationUntilStateChange, scale(cloudManager, state, &wg)) //Golang closures
+		deploymentTimer := time.AfterFunc(durationUntilStateChange, scale(cloudManager, *state)) //Golang closures
 		state.SetTimer(deploymentTimer)
 		fmt.Printf("Deployment: %v\n", state)
 
@@ -65,19 +62,18 @@ func main() {
 	//Code For Cloud Management End
 
 	//Server code Start
-	server := server.SetupServer(c)
+	server := server.SetupServer(c) //BUG: add channel for state -> scaler comm.
 	server.Run()
 	//Server code End
-
-	wg.Wait() //TODO: maybe we can remove this all together.
 }
 
-func scale(manager cloudsolution.CloudManagerInterface, s *ymlparser.State, wg *sync.WaitGroup) func() {
+func scale(manager cloudsolution.CloudManagerInterface, s ymlparser.State) func() {
 
 	return func() {
-		defer wg.Done()
+
 		if !flagVars.noCloud {
-			fmt.Println(manager.ChangeState(*s))
+			manager = manager.ChangeState(s)
+			fmt.Printf("%#v", manager.GetLastDeployedState())
 		}
 		notifier.Notify("Deployed " + s.Name)
 
@@ -105,7 +101,7 @@ type flagVariable struct {
 }
 
 func parseFlags() flagVariable {
-	noCloud := flag.Bool("no-cloud", false, "Don't start cloud management")
+	noCloud := flag.Bool("no-cloud", false, "Don't start cloud management") //NOTE: For testing only
 	configFile := flag.String("state-file", defaultYMLFile, "config file")
 	logFile := flag.String("test-file", defaultLogFile, "log file")
 

@@ -2,9 +2,12 @@ package main
 
 //run go generate first
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/Cloud-Pie/Passa/ymlparser"
 )
 
 func Test_setLogFile(t *testing.T) {
@@ -32,11 +35,15 @@ func Test_setLogFile(t *testing.T) {
 	}
 }
 
-/*func Test_getCurrentService(t *testing.T) {
-	const providerURL = "http://localhost:4000"
-	currentServices, err := getCurrentServices(providerURL)
-	if err != nil {
-		fmt.Printf("%v", err)
+func TestChannel(t *testing.T) {
+	myChan := make(chan ymlparser.State, 1)
+
+	myState := ymlparser.State{
+		Services: []ymlparser.Service{{Name: "relax_web", Scale: 1}, {Name: "relax_visualizer", Scale: 1}},
+		VMs:      []ymlparser.VM{{Type: "asd", Scale: 1}},
 	}
-	fmt.Printf("%v", currentServices)
-}*/
+
+	myChan <- myState
+	newState := <-myChan
+	fmt.Printf("%v", newState)
+}

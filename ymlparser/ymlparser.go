@@ -40,10 +40,6 @@ type Config struct {
 	} `yaml:"provider"`
 }
 
-var providerURL string
-
-//TimeLayout is the golang's special time format
-
 //ParseStatesfile parses the states file according to configuration.
 func ParseStatesfile(configFile string) *Config {
 	var c *Config

@@ -1,4 +1,4 @@
-version: "0.6"
+version: "0.7"
 provider:
   name: docker-swarm
   managerIP: 192.168.99.100
@@ -7,19 +7,19 @@ states:
 - time: 11-05-2018, 00:14:47 CEST
   name: state-with-6
   services:
-  - name: vote_vote
+  - name: relax_web
     scale: 5
   vms:
   - type: m1.small
-    scale: 4
-  - type: nano
     scale: 2
+  - type: nano
+    scale: 1
 
 
 - time: 11-05-2018, 00:19:47 CEST
   name: state-with-2
   services:
-  - name: vote_vote
+  - name: relax_web
     scale: 1
   vms:
   - type: small
@@ -27,25 +27,5 @@ states:
   - type: nano
     scale : 3
 
-- time: 11-05-2018, 00:24:47 CEST
-  name: state-with-7
-  services:
-  - name: vote_vote
-    scale: 7 
-  vms:
-  - type: small
-    scale : 2
-  - type: nano
-    scale : 3
 
-- time: 11-05-2018, 00:29:47 CEST
-  name: state-with-1
-  services:
-  - name: vote_db
-    scale: 1
-  vms:
-  - type: small
-    scale : 2
-  - type: nano
-    scale : 3
 

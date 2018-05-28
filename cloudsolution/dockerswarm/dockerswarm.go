@@ -9,8 +9,12 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"sort"
+	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/Cloud-Pie/Passa/cloudsolution"
 
 	"github.com/Cloud-Pie/Passa/ymlparser"
 	"golang.org/x/crypto/ssh"
@@ -21,6 +25,7 @@ type DockerSwarm struct {
 	joinToken          string
 	managerIP          string
 	managerMachineName string
+	lastDeployedState  ymlparser.State
 }
 
 //machinePrefix makes sure all our machines have names like myvm1, myvm2, myvm3.
@@ -36,15 +41,18 @@ const (
 	listMachineCommand      = "docker-machine ls -q"
 	removeFromSwarmCommand  = "docker node rm -f %s"
 	dockerKeyLocation       = "%s/.docker/machine/machines/%s/id_rsa"
+	getServiceCommand       = "docker service ls --format '{{.Name}} {{.Replicas}}'"
 )
 
 //NewSwarmManager returns a dockerswarm manager
 func NewSwarmManager(managerIP string) DockerSwarm {
-
-	return DockerSwarm{
+	dc := DockerSwarm{
 		managerIP:          managerIP,
 		joinToken:          getWorkerToken(managerIP, managerName),
-		managerMachineName: managerName}
+		managerMachineName: managerName,
+	}
+	dc.lastDeployedState = dc.GetActiveState()
+	return dc
 }
 
 //CreateNewMachine creates new machine with the docker-machine command.
@@ -169,59 +177,6 @@ func listMachines() []string {
 	return machinesList
 }
 
-//ChangeState changes the state of the system
-func (ds DockerSwarm) ChangeState(wantedState ymlparser.State) []string {
-
-	//BUG: This is just a work around
-	totalVM := 0
-	for idx := range wantedState.VMs {
-		totalVM += wantedState.VMs[idx].Scale
-	}
-	//Scale machines
-	currentState := listMachines()
-	difference := len(currentState) - totalVM
-	fmt.Println(difference)
-	if difference == 0 { //keep the state as is
-		return currentState
-	} else if difference > 0 { //lets delete some machines
-		var wg sync.WaitGroup
-		wg.Add(difference)
-		for i := 0; i < difference; i++ {
-			lastCompName := currentState[len(currentState)-1-i]
-			go func() {
-				defer wg.Done()
-				deleteMachine(lastCompName)
-				ds.removeFromSwarm(lastCompName)
-			}()
-
-		}
-		wg.Wait()
-	} else { //difference <0 , lets add some machines
-		var wg sync.WaitGroup
-		wg.Add(-difference)
-		for i := 0; i < -1*difference; i++ {
-			newMachineName := fmt.Sprintf("%s%v", machinePrefix, len(currentState)+i+1)
-			fmt.Println(newMachineName)
-			go func() {
-				defer wg.Done()
-				createNewMachine(newMachineName)
-				newIP := getNewMachineIP(newMachineName)
-
-				ds.addToSwarm(newIP, newMachineName)
-
-			}()
-
-		}
-		wg.Wait()
-		//Scale containers
-		for _, service := range wantedState.Services {
-			ds.scaleContainers(service.Name, service.Scale)
-		}
-	}
-
-	return listMachines()
-}
-
 //removeFromSwarm removes the deleted vm from swarm
 func (ds DockerSwarm) removeFromSwarm(machineName string) string {
 
@@ -263,4 +218,109 @@ func getSSHSession(machineIP string, machineName string) *ssh.Session {
 	}
 
 	return session
+}
+
+//ChangeState changes the state of the system
+func (ds DockerSwarm) ChangeState(wantedState ymlparser.State) cloudsolution.CloudManagerInterface {
+
+	//BUG: This is just a work around
+	totalVM := 0
+	for idx := range wantedState.VMs {
+		totalVM += wantedState.VMs[idx].Scale
+	}
+	//Scale machines
+	currentState := listMachines()
+	difference := len(currentState) - totalVM
+	fmt.Println(difference)
+	if difference == 0 { //keep the state as is
+		fmt.Println("No new machine")
+	} else if difference > 0 { //lets delete some machines
+		var wg sync.WaitGroup
+		wg.Add(difference)
+		for i := 0; i < difference; i++ {
+			lastCompName := currentState[len(currentState)-1-i]
+			go func() {
+				defer wg.Done()
+				deleteMachine(lastCompName)
+				ds.removeFromSwarm(lastCompName)
+			}()
+
+		}
+		wg.Wait()
+	} else { //difference <0 , lets add some machines
+		var wg sync.WaitGroup
+		wg.Add(-difference)
+		for i := 0; i < -1*difference; i++ {
+			newMachineName := fmt.Sprintf("%s%v", machinePrefix, len(currentState)+i+1)
+			fmt.Println(newMachineName)
+			go func() {
+				defer wg.Done()
+				createNewMachine(newMachineName)
+				newIP := getNewMachineIP(newMachineName)
+
+				ds.addToSwarm(newIP, newMachineName)
+
+			}()
+
+		}
+		wg.Wait()
+		//Scale containers
+		fmt.Printf("%#v", wantedState)
+
+	}
+	for _, service := range wantedState.Services {
+		fmt.Println("scaling")
+		ds.scaleContainers(service.Name, service.Scale)
+	}
+	ds.lastDeployedState = ds.GetActiveState()
+	return ds
+}
+
+//GetActiveState gets the current state of the cloud
+func (ds DockerSwarm) GetActiveState() ymlparser.State {
+
+	return ymlparser.State{
+		VMs: []ymlparser.VM{{
+			Type:  machinePrefix, //FIXME: just for compatibility
+			Scale: len(listMachines()),
+		}},
+		Services: ds.getServiceCount(),
+	}
+}
+
+func (ds DockerSwarm) getServiceCount() []ymlparser.Service {
+	//return []ymlparser.Service{}
+
+	session := getSSHSession(ds.managerIP, ds.managerMachineName)
+	defer session.Close()
+
+	var b bytes.Buffer
+	session.Stdout = &b
+	if err := session.Run(getServiceCommand); err != nil {
+		log.Fatal("Failed to run:" + err.Error())
+	}
+
+	servicesList := strings.Split(strings.Trim(string(b.String()[:]), "\n"), "\n")
+
+	currentServices := []ymlparser.Service{}
+	for _, serviceString := range servicesList {
+		serviceSplit := strings.Split(serviceString, " ")
+
+		serviceCount, _ := strconv.Atoi(strings.Split(serviceSplit[1], "/")[0])
+		currentServices = append(currentServices, ymlparser.Service{
+			Name:  serviceSplit[0],
+			Scale: serviceCount,
+		})
+	}
+
+	sort.Slice(currentServices, func(i, j int) bool {
+		return currentServices[i].Name > currentServices[j].Name
+	})
+
+	return currentServices
+}
+
+//GetLastDeployedState returns the State that we believe is currently running in cloud
+func (ds DockerSwarm) GetLastDeployedState() ymlparser.State {
+	return ds.lastDeployedState
 }

@@ -3,6 +3,7 @@ package dockerswarm
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/Cloud-Pie/Passa/ymlparser"
@@ -60,7 +61,7 @@ func TestChangeState(t *testing.T) {
 			name: "same state",
 			args: args{
 				wantedState: ymlparser.State{
-					Services: []ymlparser.Service{{Name: "vote_vote", Scale: 2}},
+					Services: []ymlparser.Service{{Name: "relax_web", Scale: 2}},
 					VMs:      []ymlparser.VM{{Type: "medium", Scale: 2}},
 				},
 			},
@@ -69,7 +70,7 @@ func TestChangeState(t *testing.T) {
 			name: "add new machine",
 			args: args{
 				wantedState: ymlparser.State{
-					Services: []ymlparser.Service{{Name: "vote_vote", Scale: 2}},
+					Services: []ymlparser.Service{{Name: "relax_web", Scale: 2}},
 					VMs:      []ymlparser.VM{{Type: "medium", Scale: 3}},
 				},
 			},
@@ -78,7 +79,7 @@ func TestChangeState(t *testing.T) {
 			name: "remove machine",
 			args: args{
 				wantedState: ymlparser.State{
-					Services: []ymlparser.Service{{Name: "vote_vote", Scale: 2}},
+					Services: []ymlparser.Service{{Name: "relax_web", Scale: 2}},
 					VMs:      []ymlparser.VM{{Type: "medium", Scale: 2}},
 				},
 			},
@@ -92,4 +93,44 @@ func TestChangeState(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDockerSwarm_GetActiveState(t *testing.T) {
+	swarmManager := NewSwarmManager(managerIP)
+	//swarmManager := DockerSwarm{}
+	fmt.Println("swarmManager created")
+	want := ymlparser.State{
+		Services: []ymlparser.Service{{Name: "relax_web", Scale: 1}, {Name: "relax_visualizer", Scale: 1}},
+		VMs:      []ymlparser.VM{{Type: machinePrefix, Scale: 1}},
+	}
+
+	sort.Slice(want.Services, func(i, j int) bool {
+		return want.Services[i].Name > want.Services[j].Name
+	})
+
+	got := swarmManager.GetLastDeployedState()
+
+	if !reflect.DeepEqual(got, want) {
+		fmt.Printf("got: %#v \nwan: %#v\n", got, want)
+
+		t.Fail()
+	}
+
+	//let's add a service
+	wantedState := ymlparser.State{
+		Services: []ymlparser.Service{{Name: "relax_web", Scale: 5}, {Name: "relax_visualizer", Scale: 1}},
+		VMs:      []ymlparser.VM{{Type: machinePrefix, Scale: 1}},
+	}
+
+	changed := swarmManager.ChangeState(wantedState)
+	if !reflect.DeepEqual(changed, wantedState) {
+		fmt.Printf("changed\ngot: %#v \nwan: %#v\n", changed, wantedState)
+		t.Fail()
+	}
+
+	wantedState = ymlparser.State{
+		Services: []ymlparser.Service{{Name: "relax_web", Scale: 1}},
+		VMs:      []ymlparser.VM{{Type: "medium", Scale: 1}},
+	}
+	swarmManager.ChangeState(wantedState) //back to normal
 }

@@ -1,0 +1,82 @@
+[
+    {
+        "Services": [
+            {
+                "Name": "vote_vote",
+                "Scale": 5
+            }
+        ],
+        "VMs": [
+            {
+                "Type": "m1.small",
+                "Scale": 4
+            },
+            {
+                "Type": "nano",
+                "Scale": 2
+            }
+        ],
+        "Name": "state-with-6",
+        "ISODate": "2018-03-28T03:41:23.515817567+02:00"
+    },
+    {
+        "Services": [
+            {
+                "Name": "vote_vote",
+                "Scale": 1
+            }
+        ],
+        "VMs": [
+            {
+                "Type": "small",
+                "Scale": 2
+            },
+            {
+                "Type": "nano",
+                "Scale": 3
+            }
+        ],
+        "Name": "state-with-2",
+        "ISODate": "2019-03-23T02:41:23.515817567+01:00"
+    },
+    {
+        "Services": [
+            {
+                "Name": "vote_vote",
+                "Scale": 7
+            }
+        ],
+        "VMs": [
+            {
+                "Type": "small",
+                "Scale": 2
+            },
+            {
+                "Type": "nano",
+                "Scale": 3
+            }
+        ],
+        "Name": "state-with-7",
+        "ISODate": "2019-08-20T03:41:23.515817567+02:00"
+    },
+    {
+        "Services": [
+            {
+                "Name": "vote_db",
+                "Scale": 1
+            }
+        ],
+        "VMs": [
+            {
+                "Type": "small",
+                "Scale": 2
+            },
+            {
+                "Type": "nano",
+                "Scale": 3
+            }
+        ],
+        "Name": "state-with-1",
+        "ISODate": "2020-01-17T02:41:23.515817567+01:00"
+    }
+]

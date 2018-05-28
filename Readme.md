@@ -4,7 +4,11 @@ Predictive Auto Scaling Scheduler Application
 ## To Run:
 `go generate`  
 `go build`  
-`./PASSA`
+`./Passa`
+
+or
+
+`make run`
 
 Use `make server` if you only want to see the server.
 

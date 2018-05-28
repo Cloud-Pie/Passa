@@ -35,7 +35,7 @@ func TestSetTimer(t *testing.T) {
 
 func TestParseStateFile(t *testing.T) {
 	c := ParseStatesfile("../test/passa-states-test.yml")
-	if c.Version != "0.6" {
+	if c.Version != "0.7" {
 		t.Fail()
 	}
 }
