@@ -23,6 +23,7 @@ type Communication struct {
 	SchedulerURL string
 }
 
+//CreateState send the State object to PASSA
 func (sc Communication) CreateState(state ymlparser.State) error {
 	jsonValue, _ := json.Marshal(state)
 	response, err := http.Post(sc.SchedulerURL+"/", "application/json", bytes.NewBuffer(jsonValue))
@@ -37,6 +38,7 @@ func (sc Communication) CreateState(state ymlparser.State) error {
 
 }
 
+//GetAllStates returns all states
 func (sc Communication) GetAllStates() ([]ymlparser.State, error) {
 	var returnedStates []ymlparser.State
 	response, err := http.Get(sc.SchedulerURL + "/")
@@ -55,6 +57,7 @@ func (sc Communication) GetAllStates() ([]ymlparser.State, error) {
 
 }
 
+//GetSingleState returns a single state
 func (sc Communication) GetSingleState(stateName string) (ymlparser.State, error) {
 	var returnedState ymlparser.State
 	response, err := http.Get(sc.SchedulerURL + "/" + stateName)
@@ -73,6 +76,7 @@ func (sc Communication) GetSingleState(stateName string) (ymlparser.State, error
 
 }
 
+//UpdateState updates a old state to new server
 func (sc Communication) UpdateState(oldStateName string, updateState ymlparser.State) error {
 	jsonValue, _ := json.Marshal(updateState)
 	response, err := http.Post(sc.SchedulerURL+"/"+oldStateName, "application/json", bytes.NewBuffer(jsonValue))
@@ -86,6 +90,7 @@ func (sc Communication) UpdateState(oldStateName string, updateState ymlparser.S
 	return errors.New("Scheduler request failed")
 }
 
+//DeleteState deletes the state
 func (sc Communication) DeleteState(deleteStateName string) error {
 	client := &http.Client{}
 
