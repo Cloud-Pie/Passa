@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -22,10 +23,11 @@ import (
 
 //DockerSwarm keeps joinToken and managerIP of the system
 type DockerSwarm struct {
-	joinToken          string
-	managerIP          string
-	managerMachineName string
-	lastDeployedState  ymlparser.State
+	joinToken           string
+	managerIP           string
+	managerMachineName  string
+	lastDeployedState   ymlparser.State
+	isActivelyDeploying bool
 }
 
 //machinePrefix makes sure all our machines have names like myvm1, myvm2, myvm3.
@@ -222,7 +224,7 @@ func getSSHSession(machineIP string, machineName string) *ssh.Session {
 
 //ChangeState changes the state of the system
 func (ds DockerSwarm) ChangeState(wantedState ymlparser.State) cloudsolution.CloudManagerInterface {
-
+	ds.isActivelyDeploying = true
 	//BUG: This is just a work around
 	totalVM := 0
 	for idx := range wantedState.VMs {
@@ -273,6 +275,7 @@ func (ds DockerSwarm) ChangeState(wantedState ymlparser.State) cloudsolution.Clo
 		ds.scaleContainers(service.Name, service.Scale)
 	}
 	ds.lastDeployedState = ds.GetActiveState()
+	ds.isActivelyDeploying = false
 	return ds
 }
 
@@ -323,4 +326,30 @@ func (ds DockerSwarm) getServiceCount() []ymlparser.Service {
 //GetLastDeployedState returns the State that we believe is currently running in cloud
 func (ds DockerSwarm) GetLastDeployedState() ymlparser.State {
 	return ds.lastDeployedState
+}
+
+//CheckState compares the actual state and the state we have deployed.
+func (ds DockerSwarm) CheckState() bool {
+	if ds.isActivelyDeploying { //BUG: This doesn't read with mutex, we will give wrong error eventually.
+		log.Println("Actively deploying new state")
+		return true
+	}
+	weDeployed := ds.GetLastDeployedState()
+	real := ds.GetActiveState() //SORT
+
+	sort.Slice(weDeployed.Services, func(i, j int) bool {
+		return weDeployed.Services[i].Name > weDeployed.Services[j].Name
+	})
+
+	sort.Slice(real.Services, func(i, j int) bool {
+		return real.Services[i].Name > real.Services[j].Name
+	})
+
+	if reflect.DeepEqual(weDeployed, real) {
+		log.Println("State holds")
+		return true
+	}
+
+	log.Printf("ERROR: deployed: %#v real: %#v", weDeployed, real)
+	return false
 }

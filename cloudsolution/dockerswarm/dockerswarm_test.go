@@ -96,6 +96,9 @@ func TestChangeState(t *testing.T) {
 }
 
 func TestDockerSwarm_GetActiveState(t *testing.T) {
+	if len(listMachines()) == 0 {
+		t.Skip("This test requires two machines to be present")
+	}
 	swarmManager := NewSwarmManager(managerIP)
 	//swarmManager := DockerSwarm{}
 	fmt.Println("swarmManager created")

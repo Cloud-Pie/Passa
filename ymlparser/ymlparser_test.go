@@ -54,7 +54,6 @@ func TestState_getReadableTime(t *testing.T) {
 		fields fields
 		want   string
 	}{
-		// TODO: Add test cases.
 		{
 			name: "Valid Time",
 			fields: fields{

@@ -7,4 +7,5 @@ type CloudManagerInterface interface {
 	ChangeState(ymlparser.State) CloudManagerInterface
 	GetActiveState() ymlparser.State
 	GetLastDeployedState() ymlparser.State
+	CheckState() bool
 }

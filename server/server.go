@@ -10,14 +10,15 @@ import (
 )
 
 var config *ymlparser.Config
+var stateChannel chan *ymlparser.State
 
 //SetupServer setups the web interface server
-func SetupServer(c *ymlparser.Config) *gin.Engine {
+func SetupServer(c *ymlparser.Config, sc chan *ymlparser.State) *gin.Engine {
 	r := gin.Default()
-	//d, _ := os.Getwd()
+	stateChannel = sc //left: global, right: func param
 
 	goPath := os.Getenv("GOPATH")
-	r.LoadHTMLGlob(goPath + "/src/github.com/Cloud-Pie/Passa/server/templates/*")
+	r.LoadHTMLGlob(goPath + "/src/github.com/Cloud-Pie/Passa/server/templates/*") //FIXME: still needs a fix
 	config = c
 
 	r.GET("/", func(ctx *gin.Context) {
@@ -35,7 +36,7 @@ func SetupServer(c *ymlparser.Config) *gin.Engine {
 		statesRest.POST("/", createState)
 		statesRest.GET("/", getAllStates)
 		statesRest.GET("/:name", getSingleState)
-		statesRest.PUT("/:name", updateState)
+		statesRest.POST("/:name", updateState)
 		statesRest.DELETE("/:name", deleteState)
 	}
 
@@ -58,6 +59,7 @@ func createState(c *gin.Context) {
 		})
 	} else {
 		config.States = append(config.States, newState)
+		stateChannel <- &newState
 		c.JSON(200, gin.H{
 			"data": "success",
 		})
@@ -91,7 +93,7 @@ func updateState(c *gin.Context) {
 	} else {
 
 		config.States[posToUpdate] = updatedState
-
+		//update ISODate, send to channel
 		c.JSON(200, config.States[posToUpdate])
 
 	}

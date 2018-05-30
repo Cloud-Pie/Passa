@@ -20,8 +20,9 @@ import (
 )
 
 const (
-	defaultLogFile = "test.log"
-	defaultYMLFile = "test/passa-states-test.yml"
+	defaultLogFile       = "test.log"
+	defaultYMLFile       = "test/passa-states-test.yml"
+	defaultCheckInterval = 20 //secs
 )
 
 var notifier notification.NotifierInterface
@@ -30,6 +31,7 @@ var flagVars flagVariable
 func main() {
 
 	var err error
+	stateChannel := make(chan *ymlparser.State) //Communication between server states and our scheduler
 	flagVars = parseFlags()
 	c := ymlparser.ParseStatesfile(flagVars.configFile)
 
@@ -50,21 +52,38 @@ func main() {
 		}
 	}
 
+	go schedulerRoutine(stateChannel, cloudManager) //Most important line in whole project
+
 	for idx := range c.States {
 
-		state := &c.States[idx]
-		durationUntilStateChange := state.ISODate.Sub(time.Now())
-		deploymentTimer := time.AfterFunc(durationUntilStateChange, scale(cloudManager, *state)) //Golang closures
-		state.SetTimer(deploymentTimer)
-		fmt.Printf("Deployment: %v\n", state)
-
+		if !c.States[idx].ISODate.IsZero() {
+			stateChannel <- &c.States[idx]
+		} else {
+			log.Printf("Invalid time for: %s", c.States[idx].Name)
+		}
 	}
 	//Code For Cloud Management End
 
+	//Code for WatchDog Start
+	if !flagVars.noCloud {
+		go periodicCheckRoutine(cloudManager)
+	}
+	//Code for WatchDog End
 	//Server code Start
-	server := server.SetupServer(c) //BUG: add channel for state -> scaler comm.
+	server := server.SetupServer(c, stateChannel)
 	server.Run()
 	//Server code End
+}
+
+//Most important function in the whole project !!
+func schedulerRoutine(stateChannel chan *ymlparser.State, cm cloudsolution.CloudManagerInterface) {
+	for incomingState := range stateChannel {
+		durationUntilStateChange := incomingState.ISODate.Sub(time.Now())
+		deploymentTimer := time.AfterFunc(durationUntilStateChange, scale(cm, *incomingState)) //Golang closures
+		incomingState.SetTimer(deploymentTimer)
+		fmt.Printf("Saved Deployment: %v\n", incomingState)
+
+	}
 }
 
 func scale(manager cloudsolution.CloudManagerInterface, s ymlparser.State) func() {
@@ -95,20 +114,33 @@ func setLogFile(lf string) string {
 }
 
 type flagVariable struct {
-	noCloud    bool
-	configFile string
-	logFile    string
+	noCloud             bool
+	configFile          string
+	logFile             string
+	checkStatusInterval int
 }
 
 func parseFlags() flagVariable {
 	noCloud := flag.Bool("no-cloud", false, "Don't start cloud management") //NOTE: For testing only
 	configFile := flag.String("state-file", defaultYMLFile, "config file")
 	logFile := flag.String("test-file", defaultLogFile, "log file")
+	statusInterval := flag.Int("check-status-interval", defaultCheckInterval, "Check every <this> second")
 
 	flag.Parse()
 	return flagVariable{
-		noCloud:    *noCloud,
-		configFile: *configFile,
-		logFile:    *logFile,
+		noCloud:             *noCloud,
+		configFile:          *configFile,
+		logFile:             *logFile,
+		checkStatusInterval: *statusInterval,
+	}
+}
+
+func periodicCheckRoutine(cm cloudsolution.CloudManagerInterface) {
+
+	sleepDuration := time.Duration(flagVars.checkStatusInterval) * time.Second
+	for ; ; time.Sleep(sleepDuration) {
+		if !cm.CheckState() {
+			log.Println("False State")
+		}
 	}
 }

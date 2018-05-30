@@ -36,14 +36,17 @@ func Test_setLogFile(t *testing.T) {
 }
 
 func TestChannel(t *testing.T) {
-	myChan := make(chan ymlparser.State, 1)
+	myChan := make(chan *ymlparser.State, 1)
 
 	myState := ymlparser.State{
+		Name:     "zzzz",
 		Services: []ymlparser.Service{{Name: "relax_web", Scale: 1}, {Name: "relax_visualizer", Scale: 1}},
 		VMs:      []ymlparser.VM{{Type: "asd", Scale: 1}},
 	}
 
-	myChan <- myState
+	myChan <- &myState
 	newState := <-myChan
-	fmt.Printf("%v", newState)
+	newState.Name = "aaa"
+
+	fmt.Printf("%v", myState)
 }

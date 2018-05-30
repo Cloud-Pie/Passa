@@ -15,7 +15,7 @@ import (
 
 func TestSetupServer(t *testing.T) {
 	c := ymlparser.ParseStatesfile("../test/passa-states-test.yml")
-	r := SetupServer(c)
+	r := SetupServer(c, make(chan *ymlparser.State, 30))
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/", nil)
 	r.ServeHTTP(w, req)
@@ -36,7 +36,7 @@ func TestSetupServer(t *testing.T) {
 }
 func Test_getAllStates(t *testing.T) {
 	c := ymlparser.ParseStatesfile("../test/passa-states-test.yml")
-	r := SetupServer(c)
+	r := SetupServer(c, make(chan *ymlparser.State, 30))
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/api/states/", nil)
 	r.ServeHTTP(w, req)
@@ -51,7 +51,8 @@ func Test_getAllStates(t *testing.T) {
 func Test_createState(t *testing.T) {
 
 	c := ymlparser.ParseStatesfile("../test/passa-states-test.yml")
-	r := SetupServer(c)
+	tc := make(chan *ymlparser.State, 30)
+	r := SetupServer(c, tc)
 	stateNum := len(c.States)
 	tests := []struct {
 		name          string
@@ -63,7 +64,7 @@ func Test_createState(t *testing.T) {
 			name: "Valid State",
 			stateToUpdate: ymlparser.State{
 				ISODate:  time.Now(),
-				Name:     "test-State",
+				Name:     "state-with-6",
 				Services: append([]ymlparser.Service{}, ymlparser.Service{Name: "test-service", Scale: 10}),
 			},
 			returnedCode: 200,
@@ -82,16 +83,7 @@ func Test_createState(t *testing.T) {
 				ISODate: time.Now(),
 			},
 			returnedCode: 422,
-		},
-		/*{
-			name: "Valid State with Invalid Time",
-			stateToUpdate: ymlparser.State{
-				ISODate:  "dummy iso string",
-				Name:     "test-State",
-				Services: append([]ymlparser.Service{}, ymlparser.Service{Name: "test-service", Scale: 10}),
-			},
-			returnedCode: 422,
-		},*/
+		}, //invalid string time make ISODate zero
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -116,15 +108,19 @@ func Test_createState(t *testing.T) {
 					t.Errorf("want: %v\ngot: %v\n", stateNum+1, len(returnedData))
 				}
 
+				expected := <-tc
+				if reflect.DeepEqual(expected, tt.stateToUpdate) {
+					fmt.Printf("got: %#v\nwan: %#v", expected, tt.stateToUpdate)
+
+				}
 			}
 		})
 	}
-
 }
 
 func Test_getSingleState(t *testing.T) {
 	c := ymlparser.ParseStatesfile("../test/passa-states-test.yml")
-	r := SetupServer(c)
+	r := SetupServer(c, make(chan *ymlparser.State, 30))
 
 	tests := []struct {
 		name         string
@@ -134,7 +130,7 @@ func Test_getSingleState(t *testing.T) {
 
 		{
 			name:         "Existing State",
-			stateName:    "state-with-7",
+			stateName:    "state-with-6",
 			returnedCode: 200,
 		},
 		{
@@ -158,7 +154,7 @@ func Test_getSingleState(t *testing.T) {
 
 func Test_updateState(t *testing.T) {
 	c := ymlparser.ParseStatesfile("../test/passa-states-test.yml")
-	r := SetupServer(c)
+	r := SetupServer(c, make(chan *ymlparser.State, 30))
 
 	tests := []struct {
 		name          string
@@ -174,7 +170,7 @@ func Test_updateState(t *testing.T) {
 				Name:    "update State",
 			},
 			returnedCode: 200,
-			stateName:    "state-with-7",
+			stateName:    "state-with-6",
 		},
 		{
 			name: "Non Existing State To Update",
@@ -184,15 +180,7 @@ func Test_updateState(t *testing.T) {
 			},
 			returnedCode: 422,
 			stateName:    "non-existent",
-		}, /*
-			{name: "Existing State To Update with Invalid Time",
-				stateToUpdate: ymlparser.State{
-					Time: "dummy time",
-					Name: "state-with-dummy-time",
-				},
-				returnedCode: 422,
-				stateName:    "state-with-6",
-			},*/
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -202,7 +190,7 @@ func Test_updateState(t *testing.T) {
 			if err != nil {
 				panic(err)
 			}
-			req, _ := http.NewRequest("PUT", stateLink, bytes.NewBuffer(updateState))
+			req, _ := http.NewRequest("POST", stateLink, bytes.NewBuffer(updateState))
 			r.ServeHTTP(w, req)
 			if w.Code != tt.returnedCode {
 				t.Errorf("want: %v\ngot: %v\n", tt.returnedCode, w.Code)
@@ -213,7 +201,7 @@ func Test_updateState(t *testing.T) {
 
 func Test_deleteState(t *testing.T) {
 	c := ymlparser.ParseStatesfile("../test/passa-states-test.yml")
-	r := SetupServer(c)
+	r := SetupServer(c, make(chan *ymlparser.State, 30))
 
 	tests := []struct {
 		name           string
@@ -224,7 +212,7 @@ func Test_deleteState(t *testing.T) {
 
 		{
 			name:           "Existing State",
-			stateName:      "state-with-7",
+			stateName:      "state-with-6",
 			returnedLength: len(c.States) - 1,
 			returnedCode:   200,
 		},
@@ -262,7 +250,7 @@ func Test_deleteState(t *testing.T) {
 
 func Test_test(t *testing.T) {
 	c := ymlparser.ParseStatesfile("../test/passa-states-test.yml")
-	r := SetupServer(c)
+	r := SetupServer(c, make(chan *ymlparser.State, 30))
 	w := httptest.NewRecorder()
 	myTime := time.Now()
 	myState := ymlparser.State{

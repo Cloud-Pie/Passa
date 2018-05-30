@@ -19,10 +19,10 @@ func TestSearchQuery(t *testing.T) {
 		{
 			name: "Find in Config",
 			args: args{
-				currentStates: ymlparser.ParseStatesfile("../test/passa-states-test.yml").States,
+				currentStates: []ymlparser.State{{Name: "state-with-7"}},
 				searchName:    "state-with-7",
 			},
-			want: 2,
+			want: 0,
 		},
 		{
 			name: "Don't find in Config",
