@@ -47,7 +47,7 @@ const (
 )
 
 //NewSwarmManager returns a dockerswarm manager
-func NewSwarmManager(managerIP string) DockerSwarm {
+func NewSwarmManager(managerIP string) cloudsolution.CloudManagerInterface {
 	dc := DockerSwarm{
 		managerIP:          managerIP,
 		joinToken:          getWorkerToken(managerIP, managerName),
@@ -283,10 +283,7 @@ func (ds DockerSwarm) ChangeState(wantedState ymlparser.State) cloudsolution.Clo
 func (ds DockerSwarm) GetActiveState() ymlparser.State {
 
 	return ymlparser.State{
-		VMs: []ymlparser.VM{{
-			Type:  machinePrefix, //FIXME: just for compatibility
-			Scale: len(listMachines()),
-		}},
+		VMs:      ds.getMachines(),
 		Services: ds.getServiceCount(),
 	}
 }
@@ -352,4 +349,11 @@ func (ds DockerSwarm) CheckState() bool {
 
 	log.Printf("ERROR: deployed: %#v real: %#v", weDeployed, real)
 	return false
+}
+
+func (ds DockerSwarm) getMachines() []ymlparser.VM {
+	return []ymlparser.VM{{
+		Type:  machinePrefix,
+		Scale: len(listMachines()),
+	}}
 }

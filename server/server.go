@@ -58,7 +58,7 @@ func createState(c *gin.Context) {
 			"error": "Time or service field is empty",
 		})
 	} else {
-		config.States = append(config.States, newState)
+
 		stateChannel <- &newState
 		c.JSON(200, gin.H{
 			"data": "success",
@@ -67,18 +67,18 @@ func createState(c *gin.Context) {
 }
 
 func getAllStates(c *gin.Context) {
-	fmt.Printf("%+v", config.States)
-	c.JSON(200, config.States)
+	fmt.Printf("%+v", database.ReadAllStates())
+	c.JSON(200, database.ReadAllStates())
 }
 func getSingleState(c *gin.Context) {
 	name := c.Params.ByName("name")
-	postToReturn := database.SearchQuery(config.States, name)
-	if postToReturn == -1 {
+	postToReturn, err := database.GetSingleState(name)
+	if err != nil {
 		c.JSON(422, gin.H{"error": "Not Found!"})
 
 	} else {
 
-		c.JSON(200, config.States[postToReturn])
+		c.JSON(200, postToReturn)
 	}
 
 }
@@ -87,27 +87,24 @@ func updateState(c *gin.Context) {
 	var updatedState ymlparser.State
 	c.BindJSON(&updatedState)
 	fmt.Printf("%v", updatedState)
-	posToUpdate := database.SearchQuery(config.States, name)
-	if posToUpdate == -1 {
+
+	err := database.UpdateState(updatedState, name)
+	if err != nil {
 		c.JSON(422, gin.H{"error": "Not Found"})
 	} else {
 
-		config.States[posToUpdate] = updatedState
-		//update ISODate, send to channel
-		c.JSON(200, config.States[posToUpdate])
+		c.JSON(200, updatedState)
 
 	}
 
 }
 func deleteState(c *gin.Context) {
 	name := c.Params.ByName("name")
-	postToDelete := database.SearchQuery(config.States, name)
-	if postToDelete == -1 { //Not Found
+	err := database.DeleteState(name)
+	if err != nil { //Not Found
 		c.JSON(422, gin.H{"error": "Not Found"})
 	} else {
-		config.States[postToDelete] = config.States[len(config.States)-1]
-		config.States[len(config.States)-1] = ymlparser.State{}
-		config.States = config.States[:len(config.States)-1]
+
 		c.JSON(200, gin.H{"data": "success"})
 	}
 }

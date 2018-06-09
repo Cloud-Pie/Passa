@@ -3,6 +3,7 @@ package main
 //check test directory
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"time"
 
@@ -14,7 +15,13 @@ const ymlReference = "passa-states.yml"
 const ymlTest = "test/passa-states-test.yml"
 
 func main() {
-	c := ymlparser.ParseStatesfile(ymlReference)
+
+	confContent, err := ioutil.ReadFile(ymlReference)
+	confContent = []byte(os.ExpandEnv(string(confContent)))
+	c := &ymlparser.Config{}
+	if err := yaml.Unmarshal(confContent, c); err != nil {
+		panic(err)
+	}
 	currentTime := time.Now()
 
 	addedMinutes := [5]int{-2, 10, 15, 20, 25} //Constant
@@ -23,8 +30,12 @@ func main() {
 		timein := currentTime.Local().Add(time.Hour * 24 * 30 * time.Duration(addedMinutes[idx]))
 		c.States[idx].ISODate = timein
 	}
-	fmt.Printf("%v", c)
+	fmt.Printf("%+v\n\n", c)
 
+	c.Provider.Username = os.Getenv("LRZ_USERNAME")
+	c.Provider.Password = os.Getenv("LRZ_PASSWORD")
+
+	fmt.Printf("%v", c)
 	ymlByte, err := yaml.Marshal(&c)
 	check(err)
 	f, err := os.Create(ymlTest)

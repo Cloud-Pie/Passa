@@ -6,3 +6,6 @@ build/
 PASSA
 .DS_Store
 .issues
+test/kubeconfig.txt
+*.db.json
+test/mycube.txt

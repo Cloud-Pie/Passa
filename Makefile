@@ -14,7 +14,7 @@ compile:
 	$(GOBUILD)
 
 validate:
-	$(GOGENERATE) #this also validates the pass-states.yml 
+	$(GOGENERATE) #this also validates the pass-states.yml
 
 test:
 	go generate
@@ -32,7 +32,9 @@ run:
 
 clean:
 	$(GOCLEAN) -testcache
-	rm build/*
+	- rm .db.json
+	- rm  build/*
+	
 
 server:
 	make validate
@@ -42,4 +44,3 @@ server:
 dist:
 	env GOOS=linux GOARCH=amd64 go build -o build/passa_linux
 	go build -o build/passa_mac
-

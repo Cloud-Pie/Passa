@@ -1,7 +1,13 @@
-version: "0.7"
+version: "0.8"
 provider:
   name: docker-swarm
   managerIP: 192.168.99.100
+
+provider:
+  name: lrz
+  username: ${LRZ_USERNAME}
+  password: ${LRZ_PASSWORD}
+  configFile: /Users/atakanyenel/Desktop/Computer_Science/go/src/github.com/Cloud-Pie/Passa/test/kubeconfig.txt
 
 states:
 - time: 11-05-2018, 00:14:47 CEST

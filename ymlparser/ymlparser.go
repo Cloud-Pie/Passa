@@ -35,8 +35,11 @@ type Config struct {
 	Version  string  `yaml:"version"`
 	States   []State `yaml:"states"`
 	Provider struct {
-		Name      string
-		ManagerIP string `yaml:"managerIP"`
+		Name       string
+		ManagerIP  string `yaml:"managerIP"`
+		Username   string
+		Password   string
+		ConfigFile string `yaml:"configFile"`
 	} `yaml:"provider"`
 }
 

@@ -10,8 +10,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Cloud-Pie/Passa/cloudsolution"
 	"github.com/Cloud-Pie/Passa/cloudsolution/dockerswarm"
+	"github.com/Cloud-Pie/Passa/cloudsolution/lrz"
+	"github.com/Cloud-Pie/Passa/database"
+
+	"github.com/Cloud-Pie/Passa/cloudsolution"
 	"github.com/Cloud-Pie/Passa/notification"
 	"github.com/Cloud-Pie/Passa/notification/consoleprinter"
 	"github.com/Cloud-Pie/Passa/notification/telegram"
@@ -29,7 +32,7 @@ var notifier notification.NotifierInterface
 var flagVars flagVariable
 
 func main() {
-
+	database.InitializeDB()
 	var err error
 	stateChannel := make(chan *ymlparser.State) //Communication between server states and our scheduler
 	flagVars = parseFlags()
@@ -49,6 +52,8 @@ func main() {
 	if !flagVars.noCloud {
 		if c.Provider.Name == "docker-swarm" {
 			cloudManager = dockerswarm.NewSwarmManager(c.Provider.ManagerIP)
+		} else if c.Provider.Name == "lrz" {
+			cloudManager = lrz.NewLRZManager(c.Provider.Username, c.Provider.Password, c.Provider.ConfigFile)
 		}
 	}
 
@@ -82,6 +87,7 @@ func schedulerRoutine(stateChannel chan *ymlparser.State, cm cloudsolution.Cloud
 		deploymentTimer := time.AfterFunc(durationUntilStateChange, scale(cm, *incomingState)) //Golang closures
 		incomingState.SetTimer(deploymentTimer)
 		fmt.Printf("Saved Deployment: %v\n", incomingState)
+		database.InsertState(*incomingState)
 
 	}
 }
