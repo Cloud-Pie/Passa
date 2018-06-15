@@ -10,12 +10,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Cloud-Pie/Passa/cloudsolution"
+	"github.com/Cloud-Pie/Passa/database"
 	"github.com/Cloud-Pie/Passa/ymlparser"
 )
 
 func TestSetupServer(t *testing.T) {
-	c := ymlparser.ParseStatesfile("../test/passa-states-test.yml")
-	r := SetupServer(c, make(chan *ymlparser.State, 30))
+
+	r := SetupServer(testManager{}, make(chan *ymlparser.State, 30))
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/", nil)
 	r.ServeHTTP(w, req)
@@ -35,25 +37,24 @@ func TestSetupServer(t *testing.T) {
 
 }
 func Test_getAllStates(t *testing.T) {
-	c := ymlparser.ParseStatesfile("../test/passa-states-test.yml")
-	r := SetupServer(c, make(chan *ymlparser.State, 30))
+
+	r := SetupServer(testManager{}, make(chan *ymlparser.State, 30))
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/api/states/", nil)
 	r.ServeHTTP(w, req)
 
 	var returnedData []ymlparser.State
 	json.Unmarshal(w.Body.Bytes(), &returnedData)
-	if !reflect.DeepEqual(c.States, returnedData) {
-		t.Errorf("want: %v\ngot: %v\n", c.States, returnedData)
+	if !reflect.DeepEqual(database.ReadAllStates(), returnedData) {
+		t.Errorf("want: %v\ngot: %v\n", database.ReadAllStates(), returnedData)
 	}
 }
 
 func Test_createState(t *testing.T) {
 
-	c := ymlparser.ParseStatesfile("../test/passa-states-test.yml")
 	tc := make(chan *ymlparser.State, 30)
-	r := SetupServer(c, tc)
-	stateNum := len(c.States)
+	r := SetupServer(testManager{}, tc)
+	stateNum := len(database.ReadAllStates())
 	tests := []struct {
 		name          string
 		stateToUpdate ymlparser.State
@@ -119,8 +120,8 @@ func Test_createState(t *testing.T) {
 }
 
 func Test_getSingleState(t *testing.T) {
-	c := ymlparser.ParseStatesfile("../test/passa-states-test.yml")
-	r := SetupServer(c, make(chan *ymlparser.State, 30))
+
+	r := SetupServer(testManager{}, make(chan *ymlparser.State, 30))
 
 	tests := []struct {
 		name         string
@@ -153,8 +154,8 @@ func Test_getSingleState(t *testing.T) {
 }
 
 func Test_updateState(t *testing.T) {
-	c := ymlparser.ParseStatesfile("../test/passa-states-test.yml")
-	r := SetupServer(c, make(chan *ymlparser.State, 30))
+
+	r := SetupServer(testManager{}, make(chan *ymlparser.State, 30))
 
 	tests := []struct {
 		name          string
@@ -200,8 +201,8 @@ func Test_updateState(t *testing.T) {
 }
 
 func Test_deleteState(t *testing.T) {
-	c := ymlparser.ParseStatesfile("../test/passa-states-test.yml")
-	r := SetupServer(c, make(chan *ymlparser.State, 30))
+
+	r := SetupServer(testManager{}, make(chan *ymlparser.State, 30))
 
 	tests := []struct {
 		name           string
@@ -213,13 +214,13 @@ func Test_deleteState(t *testing.T) {
 		{
 			name:           "Existing State",
 			stateName:      "state-with-6",
-			returnedLength: len(c.States) - 1,
+			returnedLength: len(database.ReadAllStates()) - 1,
 			returnedCode:   200,
 		},
 		{
 			name:           "Non Existing State",
 			stateName:      "non-state",
-			returnedLength: len(c.States),
+			returnedLength: len(database.ReadAllStates()),
 			returnedCode:   422,
 		},
 	}
@@ -249,8 +250,8 @@ func Test_deleteState(t *testing.T) {
 }
 
 func Test_test(t *testing.T) {
-	c := ymlparser.ParseStatesfile("../test/passa-states-test.yml")
-	r := SetupServer(c, make(chan *ymlparser.State, 30))
+
+	r := SetupServer(testManager{}, make(chan *ymlparser.State, 30))
 	w := httptest.NewRecorder()
 	myTime := time.Now()
 	myState := ymlparser.State{
@@ -264,4 +265,36 @@ func Test_test(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/test", bytes.NewBuffer(jsonState))
 	r.ServeHTTP(w, req)
 
+}
+
+type testManager struct {
+	name string
+}
+
+func (testManager) ChangeState(ymlparser.State) cloudsolution.CloudManagerInterface {
+
+	return testManager{}
+}
+func (testManager) GetActiveState() ymlparser.State {
+
+	return ymlparser.State{
+		Name: "My Active State",
+	}
+}
+func (testManager) GetLastDeployedState() ymlparser.State {
+	return ymlparser.State{
+		Name: "My Last Deployed State",
+	}
+}
+func (testManager) CheckState() bool {
+
+	return true
+}
+
+func Test_getCurrentState(t *testing.T) {
+	tm := testManager{
+		name: "test",
+	}
+	r := SetupServer(tm, make(chan *ymlparser.State, 30))
+	r.Run(":7000")
 }
