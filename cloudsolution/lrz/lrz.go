@@ -3,6 +3,7 @@ package lrz
 import (
 	"fmt"
 	"log"
+	"reflect"
 	"sort"
 
 	"github.com/Cloud-Pie/Passa/cloudsolution"
@@ -14,10 +15,7 @@ import (
 	"k8s.io/client-go/util/retry"
 )
 
-type econe struct {
-	username string
-	password string
-}
+//Lrz keeps the data needed for econe and kubernetes interfaces.
 type Lrz struct {
 	lastDeployedState   ymlparser.State
 	econe               econe
@@ -25,13 +23,17 @@ type Lrz struct {
 	isActivelyDeploying bool
 }
 
-const ec2URL = "https://www.cloud.mwn.de:22"
-
 //NewLRZManager return a new manager for lrz.
 func NewLRZManager(username, password, configFile string) Lrz {
 
-	config, _ := clientcmd.BuildConfigFromFlags("", configFile)
-	clientset, _ := kubernetes.NewForConfig(config)
+	config, err := clientcmd.BuildConfigFromFlags("", configFile)
+	if err != nil {
+		log.Fatal("Cannot not connect to kubernetes cluster , exiting...")
+	}
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		log.Fatal("Cannot not connect to kubernetes cluster , exiting...")
+	}
 	cs := Lrz{
 		econe: econe{
 			username: username,
@@ -39,13 +41,20 @@ func NewLRZManager(username, password, configFile string) Lrz {
 		},
 		kube: clientset,
 	}
-	cs.lastDeployedState = cs.GetLastDeployedState()
+	cs.lastDeployedState = cs.GetActiveState()
 	return cs
 }
 
+//ChangeState deploys wanted state to LRZ and kubernetes
 func (l Lrz) ChangeState(wantedState ymlparser.State) cloudsolution.CloudManagerInterface {
 
 	l.isActivelyDeploying = true
+
+	if wantedState.VMs != nil {
+		l.econe.scaleVms(wantedState.VMs, l.GetLastDeployedState().VMs)
+	} else {
+		log.Printf("%s has no VM state, keeping current...", wantedState.Name)
+	}
 	for _, service := range wantedState.Services {
 		l.scaleContainers(service.Name, service.Scale)
 	}
@@ -54,19 +63,47 @@ func (l Lrz) ChangeState(wantedState ymlparser.State) cloudsolution.CloudManager
 	return l
 }
 
+//GetActiveState gets current application state
 func (l Lrz) GetActiveState() ymlparser.State {
 	return ymlparser.State{
-		VMs:      l.getMachines(),
+		VMs:      l.econe.getVMs(),
 		Services: l.getServiceCount(),
 	}
 
 }
+
+//GetLastDeployedState returns last deployed state by the system
 func (l Lrz) GetLastDeployedState() ymlparser.State {
-	return ymlparser.State{}
+	return l.lastDeployedState
 
 }
+
+//CheckState checks whether the deployed state and the actual state are the same
 func (l Lrz) CheckState() bool {
-	return true
+	if l.isActivelyDeploying { //BUG: This doesn't read with mutex, we will give wrong error eventually.
+		log.Println("Actively deploying new state")
+		return true
+	}
+	weDeployed := l.GetLastDeployedState()
+	real := l.GetActiveState() //SORT
+
+	sort.Slice(weDeployed.Services, func(i, j int) bool {
+		return weDeployed.Services[i].Name > weDeployed.Services[j].Name
+	})
+
+	sort.Slice(real.Services, func(i, j int) bool {
+		return real.Services[i].Name > real.Services[j].Name
+	})
+
+	real.ISODate = weDeployed.ISODate //see dockerswarm.go
+	if reflect.DeepEqual(weDeployed, real) {
+		log.Println("State holds")
+		return true
+	}
+
+	log.Printf("ERROR: deployed: %#v real: %#v", weDeployed, real)
+	return false
+
 }
 
 func (l Lrz) getServiceCount() []ymlparser.Service {
@@ -86,18 +123,6 @@ func (l Lrz) getServiceCount() []ymlparser.Service {
 	})
 
 	return currentServices
-}
-
-func (l Lrz) getMachines() []ymlparser.VM {
-
-	nodesList, err := l.kube.CoreV1().Nodes().List(metav1.ListOptions{})
-	if err != nil {
-		panic(err)
-	}
-	return []ymlparser.VM{{
-		Type:  "myMachine",
-		Scale: len(nodesList.Items),
-	}}
 }
 
 func (l Lrz) scaleContainers(serviceName string, scaleNum int) string {
@@ -124,8 +149,4 @@ func (l Lrz) scaleContainers(serviceName string, scaleNum int) string {
 	fmt.Println("Updated deployment...")
 
 	return ""
-}
-
-func (e econe) createNewVM() {
-	//Write the code for a new VM in LRZ in 'econe'
 }

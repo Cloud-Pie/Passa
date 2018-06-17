@@ -225,50 +225,54 @@ func getSSHSession(machineIP string, machineName string) *ssh.Session {
 //ChangeState changes the state of the system
 func (ds DockerSwarm) ChangeState(wantedState ymlparser.State) cloudsolution.CloudManagerInterface {
 	ds.isActivelyDeploying = true
-	//BUG: This is just a work around
-	totalVM := 0
-	for idx := range wantedState.VMs {
-		totalVM += wantedState.VMs[idx].Scale
-	}
-	//Scale machines
-	currentState := listMachines()
-	difference := len(currentState) - totalVM
-	fmt.Println(difference)
-	if difference == 0 { //keep the state as is
-		fmt.Println("No new machine")
-	} else if difference > 0 { //lets delete some machines
-		var wg sync.WaitGroup
-		wg.Add(difference)
-		for i := 0; i < difference; i++ {
-			lastCompName := currentState[len(currentState)-1-i]
-			go func() {
-				defer wg.Done()
-				deleteMachine(lastCompName)
-				ds.removeFromSwarm(lastCompName)
-			}()
+	if wantedState.VMs != nil {
+		//BUG: This is just a work around
+		totalVM := 0
+		for idx := range wantedState.VMs {
+			totalVM += wantedState.VMs[idx].Scale
+		}
+		//Scale machines
+		currentState := listMachines()
+		difference := len(currentState) - totalVM
+		fmt.Println(difference)
+		if difference == 0 { //keep the state as is
+			fmt.Println("No new machine")
+		} else if difference > 0 { //lets delete some machines
+			var wg sync.WaitGroup
+			wg.Add(difference)
+			for i := 0; i < difference; i++ {
+				lastCompName := currentState[len(currentState)-1-i]
+				go func() {
+					defer wg.Done()
+					deleteMachine(lastCompName)
+					ds.removeFromSwarm(lastCompName)
+				}()
+
+			}
+			wg.Wait()
+		} else { //difference <0 , lets add some machines
+			var wg sync.WaitGroup
+			wg.Add(-difference)
+			for i := 0; i < -1*difference; i++ {
+				newMachineName := fmt.Sprintf("%s%v", machinePrefix, len(currentState)+i+1)
+				fmt.Println(newMachineName)
+				go func() {
+					defer wg.Done()
+					createNewMachine(newMachineName)
+					newIP := getNewMachineIP(newMachineName)
+
+					ds.addToSwarm(newIP, newMachineName)
+
+				}()
+
+			}
+			wg.Wait()
+			//Scale containers
+			fmt.Printf("%#v", wantedState)
 
 		}
-		wg.Wait()
-	} else { //difference <0 , lets add some machines
-		var wg sync.WaitGroup
-		wg.Add(-difference)
-		for i := 0; i < -1*difference; i++ {
-			newMachineName := fmt.Sprintf("%s%v", machinePrefix, len(currentState)+i+1)
-			fmt.Println(newMachineName)
-			go func() {
-				defer wg.Done()
-				createNewMachine(newMachineName)
-				newIP := getNewMachineIP(newMachineName)
-
-				ds.addToSwarm(newIP, newMachineName)
-
-			}()
-
-		}
-		wg.Wait()
-		//Scale containers
-		fmt.Printf("%#v", wantedState)
-
+	} else {
+		log.Printf("%s has no VM state, keeping current...", wantedState.Name)
 	}
 	for _, service := range wantedState.Services {
 		fmt.Println("scaling")
@@ -342,12 +346,13 @@ func (ds DockerSwarm) CheckState() bool {
 		return real.Services[i].Name > real.Services[j].Name
 	})
 
+	real.ISODate = weDeployed.ISODate //server return zero ISODate and is equal check fails otherwise
 	if reflect.DeepEqual(weDeployed, real) {
 		log.Println("State holds")
 		return true
 	}
 
-	log.Printf("ERROR: deployed: %#v real: %#v", weDeployed, real)
+	log.Printf("ERROR: \ndepl: %#v\nreal: %#v\n", weDeployed, real)
 	return false
 }
 

@@ -26,7 +26,7 @@ cover:
 	$(GOCMD) tool cover -html=cp.out
 
 run:
-	make generate
+	$(GOGENERATE)
 	$(GOBUILD)
 	./Passa
 

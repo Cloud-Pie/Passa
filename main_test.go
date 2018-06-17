@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/Cloud-Pie/Passa/ymlparser"
 )
@@ -49,4 +50,12 @@ func TestChannel(t *testing.T) {
 	newState.Name = "aaa"
 
 	fmt.Printf("%v", myState)
+}
+
+func Test_minusDuration(t *testing.T) {
+	myDuration := time.Now().Local().Add(time.Hour * -2)
+
+	if time.Now().After(myDuration) {
+		fmt.Println("past time")
+	}
 }

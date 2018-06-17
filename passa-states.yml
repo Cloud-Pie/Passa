@@ -1,13 +1,14 @@
-version: "0.8"
+version: "0.9"
 provider:
   name: docker-swarm
   managerIP: 192.168.99.100
 
 provider:
-  name: lrz
+  name: docker-swarm
   username: ${LRZ_USERNAME}
   password: ${LRZ_PASSWORD}
-  configFile: /Users/atakanyenel/Desktop/Computer_Science/go/src/github.com/Cloud-Pie/Passa/test/kubeconfig.txt
+  configFile: /Users/atakanyenel/Desktop/Computer_Science/go/src/github.com/Cloud-Pie/Passa/test/admin.conf
+  joinCommand: kubeadm join 10.155.209.32:6443 --token iok3y5.tl19pxm0ga2ptmxl --discovery-token-ca-cert-hash sha256:66675a910a53e6abd050b2bc2a4dde1f374450460d62921a7d58a2eaa1993e4b
 
 states:
 - time: 11-05-2018, 00:14:47 CEST

@@ -7,19 +7,16 @@ import (
 	"github.com/Cloud-Pie/Passa/ymlparser"
 )
 
-func Test_lrz_getServiceCount(t *testing.T) {
-	tester := NewLRZManager("username", "password", "/Users/atakanyenel/Desktop/Computer_Science/go/src/github.com/Cloud-Pie/Passa/test/kubeconfig.txt")
-
-	services := tester.getServiceCount()
+func Test_lrz_getActiveState(t *testing.T) {
+	tester := NewLRZManager("username", "password", "/Users/atakanyenel/Desktop/Computer_Science/go/src/github.com/Cloud-Pie/Passa/test/admin.conf")
 
 	state := tester.GetActiveState()
-	fmt.Printf("%+v", services)
 	fmt.Printf("%+v", state)
 
 }
 
 func Test_lrz_scaleContainers(t *testing.T) {
-	tester := NewLRZManager("username", "password", "/Users/atakanyenel/Desktop/mycube.txt")
+	tester := NewLRZManager("username", "password", "/Users/atakanyenel/Desktop/Computer_Science/go/src/github.com/Cloud-Pie/Passa/test/admin.conf")
 
 	state := tester.GetActiveState()
 
