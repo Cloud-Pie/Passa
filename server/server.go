@@ -2,9 +2,6 @@ package server
 
 import (
 	"fmt"
-	"os"
-
-	"github.com/Cloud-Pie/Passa/cloudsolution"
 
 	"github.com/Cloud-Pie/Passa/database"
 	"github.com/Cloud-Pie/Passa/ymlparser"
@@ -13,16 +10,13 @@ import (
 
 var config *ymlparser.Config
 var stateChannel chan *ymlparser.State
-var cloudManager cloudsolution.CloudManagerInterface
 
 //SetupServer setups the web interface server
-func SetupServer(cm cloudsolution.CloudManagerInterface, sc chan *ymlparser.State) *gin.Engine {
+func SetupServer(sc chan *ymlparser.State) *gin.Engine {
 	r := gin.Default()
 	stateChannel = sc //left: global, right: func param
-	cloudManager = cm
-	fmt.Printf("%v", cloudManager)
-	goPath := os.Getenv("GOPATH")
-	r.LoadHTMLGlob(goPath + "/src/github.com/Cloud-Pie/Passa/server/templates/*") //FIXME: still needs a fix
+
+	//r.LoadHTMLGlob(os.Getenv("GOPATH") + "/src/github.com/Cloud-Pie/Passa/server/templates/*") //FIXME: still needs a fix
 
 	r.GET("/", func(ctx *gin.Context) {
 
@@ -44,7 +38,6 @@ func SetupServer(cm cloudsolution.CloudManagerInterface, sc chan *ymlparser.Stat
 
 	}
 
-	r.GET("api/current", getCurrentState)
 	r.POST("/test", func(c *gin.Context) {
 		var myState ymlparser.State
 		c.BindJSON(&myState)
@@ -112,12 +105,4 @@ func deleteState(c *gin.Context) {
 
 		c.JSON(200, gin.H{"data": "success"})
 	}
-}
-
-func getCurrentState(c *gin.Context) {
-	c.JSON(200,
-		gin.H{
-			"lastDeployed": cloudManager.GetLastDeployedState(),
-			"active":       cloudManager.GetActiveState(),
-		})
 }

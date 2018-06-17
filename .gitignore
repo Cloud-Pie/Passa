@@ -9,3 +9,5 @@ PASSA
 test/kubeconfig.txt
 *.db.json
 test/mycube.txt
+*.conf
+*.private

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"sync"
 
@@ -22,10 +23,8 @@ var db myDataBase
 const fileName = ".db.json"
 
 //InitializeDB initializes a new no-sql Database.
-func InitializeDB() {
-
-	//goPath := os.Getenv("GOPATH")
-	//filePath := goPath + "/src/github.com/Cloud-Pie/Passa/database/" + fileName
+func InitializeDB(c *ymlparser.Config) {
+	log.Println("Initialize database")
 	db = myDataBase{
 		filepath: fileName,
 	}
@@ -41,14 +40,24 @@ func InitializeDB() {
 		}
 		file.Write(dbByte)
 		defer file.Close()
+		writeProviderInfo(c)
 	}
 
+}
+
+//ReadConfig reads the whole config.
+func ReadConfig() ymlparser.Config {
+	db.Lock()
+	defer db.Unlock()
+	c := loadDBtoMemory()
+	return c
 }
 
 //InsertState inserts state in to the database
 func InsertState(newState ymlparser.State) {
 
 	db.Lock()
+	log.Printf("Inserting state: %v\n", newState)
 	defer db.Unlock()
 
 	c := loadDBtoMemory()
@@ -59,7 +68,7 @@ func InsertState(newState ymlparser.State) {
 
 //ReadAllStates reads all the states from the database
 func ReadAllStates() []ymlparser.State {
-
+	log.Println("Reading all states")
 	c := loadDBtoMemory()
 	return c.States
 
@@ -77,7 +86,7 @@ func searchQuery(currentStates []ymlparser.State, searchName string) int {
 }
 
 func loadDBtoMemory() ymlparser.Config {
-
+	log.Println("Loading to memory")
 	if db.filepath == "" {
 		panic(errors.New("No DB initialized"))
 	}
@@ -97,15 +106,16 @@ func loadDBtoMemory() ymlparser.Config {
 }
 
 //UpdateState updates the state with the given name
-func UpdateState(updatedstate ymlparser.State, oldStateName string) error {
+func UpdateState(updatedState ymlparser.State, oldStateName string) error {
 	db.Lock()
+	log.Printf("Updating state %s to  %v", oldStateName, updatedState)
 	defer db.Unlock()
 	c := loadDBtoMemory()
 	pos := searchQuery(c.States, oldStateName)
 	if pos == -1 {
 		return errors.New("No state with that name")
 	}
-	c.States[pos] = updatedstate
+	c.States[pos] = updatedState
 	writeToFile(c)
 	return nil
 }
@@ -113,6 +123,7 @@ func UpdateState(updatedstate ymlparser.State, oldStateName string) error {
 //DeleteState deletes the state with the given name
 func DeleteState(stateToDelete string) error {
 	db.Lock()
+	log.Printf("Deleting state: %v", stateToDelete)
 	defer db.Unlock()
 	c := loadDBtoMemory()
 	pos := searchQuery(c.States, stateToDelete)
@@ -126,6 +137,7 @@ func DeleteState(stateToDelete string) error {
 	return nil
 }
 func dropDB() { //Just for testing
+	log.Print("Dropping database...")
 	if _, err := os.Stat(fileName); os.IsNotExist(err) {
 		return
 	}
@@ -138,6 +150,7 @@ func dropDB() { //Just for testing
 }
 
 func writeToFile(c ymlparser.Config) {
+	log.Print("Writing to file...")
 	dbByte, err := json.Marshal(&c)
 	if err != nil {
 		panic(err)
@@ -150,10 +163,23 @@ func writeToFile(c ymlparser.Config) {
 
 //GetSingleState gets the state with the given name
 func GetSingleState(stateName string) (ymlparser.State, error) {
+	log.Printf("Getting state: %s", stateName)
 	c := loadDBtoMemory()
 	pos := searchQuery(c.States, stateName)
 	if pos == -1 {
 		return ymlparser.State{}, errors.New("No state found")
 	}
 	return c.States[pos], nil
+}
+
+func writeProviderInfo(conf *ymlparser.Config) {
+	db.Lock()
+	log.Println("Inserting provider info")
+	defer db.Unlock()
+
+	c := loadDBtoMemory()
+	c.Provider = conf.Provider
+	c.Version = conf.Version
+
+	writeToFile(c)
 }

@@ -1,18 +1,20 @@
-package server
+package client
 
+/*
 import (
 	"log"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/Cloud-Pie/Passa/database"
+
 	"github.com/Cloud-Pie/Passa/ymlparser"
 )
 
 func TestCommunication(t *testing.T) {
 
-	c := ymlparser.ParseStatesfile("../test/passa-states-test.yml")
-	r := SetupServer(c, make(chan *ymlparser.State, 30))
+	r := SetupServer(testManager{}, make(chan *ymlparser.State, 30))
 
 	go r.Run()
 
@@ -36,8 +38,8 @@ func TestCommunication(t *testing.T) {
 	}
 	//GetAll
 	returnedStates, err := comm.GetAllStates()
-	if err != nil || !reflect.DeepEqual(returnedStates, c.States) {
-		log.Printf("GetAll Failed\n %+v \n %+v", returnedStates, c.States)
+	if err != nil || !reflect.DeepEqual(returnedStates, database.ReadAllStates()) {
+		log.Printf("GetAll Failed\n %+v \n %+v", returnedStates, database.ReadAllStates())
 		t.Fail()
 	}
 	//GetSingle
@@ -65,3 +67,4 @@ func TestCommunication(t *testing.T) {
 	}
 	log.Println("testing... End")
 }
+*/
