@@ -57,11 +57,17 @@ func ReadConfig() ymlparser.Config {
 func InsertState(newState ymlparser.State) {
 
 	db.Lock()
-	log.Printf("Inserting state: %v\n", newState)
 	defer db.Unlock()
 
 	c := loadDBtoMemory()
-	c.States = append(c.States, newState)
+	pos := searchQuery(c.States, newState.Name)
+	if pos != -1 {
+		log.Printf("%s exists,updating...", newState.Name)
+		c.States[pos] = newState
+	} else {
+		log.Printf("Inserting %s", newState.Name)
+		c.States = append(c.States, newState)
+	}
 
 	writeToFile(c)
 }
