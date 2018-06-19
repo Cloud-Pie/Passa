@@ -2,9 +2,10 @@ package lrz
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
-	"reflect"
 	"sort"
+	"time"
 
 	"github.com/Cloud-Pie/Passa/cloudsolution"
 	"github.com/Cloud-Pie/Passa/ymlparser"
@@ -15,20 +16,23 @@ import (
 	"k8s.io/client-go/util/retry"
 )
 
+const scriptFilename = "lrzscript.sh"
+const bashCommand = "#!/usr/bin/env bash"
+const deploymentTimeout = 60 * time.Second
+
 //Lrz keeps the data needed for econe and kubernetes interfaces.
 type Lrz struct {
-	lastDeployedState   ymlparser.State
-	econe               econe
-	kube                *kubernetes.Clientset
-	isActivelyDeploying bool
+	lastDeployedState ymlparser.State
+	econe             econe
+	kube              *kubernetes.Clientset
 }
 
 //NewLRZManager return a new manager for lrz.
-func NewLRZManager(username, password, configFile string) Lrz {
+func NewLRZManager(username, password, configFile string, joinCommand string) Lrz {
 
 	config, err := clientcmd.BuildConfigFromFlags("", configFile)
 	if err != nil {
-		log.Fatal("Cannot not connect to kubernetes cluster , exiting...")
+		log.Fatal("Couldn't build config from file")
 	}
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
@@ -41,6 +45,10 @@ func NewLRZManager(username, password, configFile string) Lrz {
 		},
 		kube: clientset,
 	}
+	log.Println("Adding join token to file")
+	data := []byte(fmt.Sprintf("%s\n%s", bashCommand, joinCommand))
+	ioutil.WriteFile(scriptFilename, data, 0644)
+
 	cs.lastDeployedState = cs.GetActiveState()
 	return cs
 }
@@ -48,18 +56,62 @@ func NewLRZManager(username, password, configFile string) Lrz {
 //ChangeState deploys wanted state to LRZ and kubernetes
 func (l Lrz) ChangeState(wantedState ymlparser.State) cloudsolution.CloudManagerInterface {
 
-	l.isActivelyDeploying = true
-
 	if wantedState.VMs != nil {
-		l.econe.scaleVms(wantedState.VMs, l.GetLastDeployedState().VMs)
+		l.econe.scaleVms(wantedState.VMs, l.kube)
+		start := time.Now()
+		for ; time.Since(start) < deploymentTimeout; time.Sleep(10 * time.Second) {
+
+			log.Println("waiting for VM to deploy")
+			if areVMsCorrect(wantedState.VMs, l.econe.getVMs()) {
+				log.Println("Vms deployed")
+				break //FIXME: to a variable
+			}
+
+		}
+
+		if !(time.Since(start) < deploymentTimeout) { //timeout exceed
+			log.Println("VM deployment timeout, moving on...")
+		}
+
+		start = time.Now()
+		for ; time.Since(start) < deploymentTimeout; time.Sleep(10 * time.Second) {
+
+			nodesInKube := 0
+			totalNumberofVMs := 0
+			nodesList, err := l.kube.CoreV1().Nodes().List(metav1.ListOptions{}) //get node in kube
+			if err != nil {
+				panic(err)
+			}
+			for _, node := range nodesList.Items {
+				if node.Status.Conditions[4].Status == apiv1.ConditionTrue { // 4 stands for isReady?
+					nodesInKube++
+				}
+			}
+			for _, v := range l.econe.getVMs() {
+				totalNumberofVMs += v.Scale
+			}
+
+			if nodesInKube != totalNumberofVMs {
+				log.Printf("kube nodes:%v , vm number: %v\n", nodesInKube, totalNumberofVMs)
+			} else {
+				log.Printf("Kubernetes configured, node count: %v", nodesInKube)
+				break //FIXME: with a variable
+			}
+			log.Println("waiting for VMs to join kubernetes")
+
+		}
+		if !(time.Since(start) < deploymentTimeout) { //timeout exceed
+			log.Println("Kubernetes join timeout, moving on...")
+		}
+
 	} else {
-		log.Printf("%s has no VM state, keeping current...", wantedState.Name)
+		log.Printf("%s has no VM state, keeping current configuration", wantedState.Name)
 	}
+
 	for _, service := range wantedState.Services {
 		l.scaleContainers(service.Name, service.Scale)
 	}
-	l.lastDeployedState = l.GetActiveState()
-	l.isActivelyDeploying = false
+	l.lastDeployedState = wantedState
 	return l
 }
 
@@ -80,30 +132,19 @@ func (l Lrz) GetLastDeployedState() ymlparser.State {
 
 //CheckState checks whether the deployed state and the actual state are the same
 func (l Lrz) CheckState() bool {
-	if l.isActivelyDeploying { //BUG: This doesn't read with mutex, we will give wrong error eventually.
-		log.Println("Actively deploying new state")
-		return true
-	}
+
 	weDeployed := l.GetLastDeployedState()
 	real := l.GetActiveState() //SORT
 
-	sort.Slice(weDeployed.Services, func(i, j int) bool {
-		return weDeployed.Services[i].Name > weDeployed.Services[j].Name
-	})
+	//compare services
 
-	sort.Slice(real.Services, func(i, j int) bool {
-		return real.Services[i].Name > real.Services[j].Name
-	})
+	//compare vms
+	if areVMsCorrect(weDeployed.VMs, real.VMs) && areServicesCorrect(weDeployed.Services, real.Services) {
 
-	real.ISODate = weDeployed.ISODate //see dockerswarm.go
-	if reflect.DeepEqual(weDeployed, real) {
-		log.Println("State holds")
 		return true
 	}
-
-	log.Printf("ERROR: deployed: %#v real: %#v", weDeployed, real)
+	log.Printf("ERROR:\ndepl: %#v\nreal: %#v", weDeployed, real)
 	return false
-
 }
 
 func (l Lrz) getServiceCount() []ymlparser.Service {
@@ -127,7 +168,7 @@ func (l Lrz) getServiceCount() []ymlparser.Service {
 
 func (l Lrz) scaleContainers(serviceName string, scaleNum int) string {
 
-	log.Println("Updating deployment...")
+	log.Println("Updating Services...")
 	deploymentsClient := l.kube.AppsV1().Deployments(apiv1.NamespaceDefault)
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		// Retrieve the latest version of Deployment before attempting update
@@ -146,7 +187,49 @@ func (l Lrz) scaleContainers(serviceName string, scaleNum int) string {
 	if retryErr != nil {
 		panic(fmt.Errorf("Update failed: %v", retryErr))
 	}
-	fmt.Println("Updated deployment...")
+	log.Println("Updated deployment...")
 
 	return ""
+}
+
+func areVMsCorrect(deployed []ymlparser.VM, real []ymlparser.VM) bool {
+
+	deployedVMMap := map[string]int{}
+	realVMMap := map[string]int{}
+
+	for _, vm := range deployed {
+		deployedVMMap[vm.Type] = vm.Scale
+	}
+
+	for _, vm := range real {
+		realVMMap[vm.Type] = vm.Scale
+	}
+
+	for key := range deployedVMMap {
+		if deployedVMMap[key] != realVMMap[key] {
+			return false
+		}
+	}
+	return true
+}
+
+func areServicesCorrect(deployed []ymlparser.Service, real []ymlparser.Service) bool {
+	deployedServicesMap := map[string]int{}
+
+	realServicesMap := map[string]int{}
+
+	for _, service := range deployed {
+		deployedServicesMap[service.Name] = service.Scale
+	}
+
+	for _, service := range real {
+		realServicesMap[service.Name] = service.Scale
+	}
+
+	for key := range deployedServicesMap {
+		if deployedServicesMap[key] != realServicesMap[key] {
+			return false
+		}
+	}
+	return true
 }

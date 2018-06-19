@@ -4,7 +4,6 @@ package database
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -24,7 +23,7 @@ const fileName = ".db.json"
 
 //InitializeDB initializes a new no-sql Database.
 func InitializeDB(c *ymlparser.Config) {
-	log.Println("Initialize database")
+	log.Println("Initializing database....")
 	db = myDataBase{
 		filepath: fileName,
 	}
@@ -41,6 +40,9 @@ func InitializeDB(c *ymlparser.Config) {
 		file.Write(dbByte)
 		defer file.Close()
 		writeProviderInfo(c)
+		log.Printf("database created in %s", fileName)
+	} else {
+		log.Println("database already exists")
 	}
 
 }
@@ -103,7 +105,10 @@ func loadDBtoMemory() ymlparser.Config {
 	}
 	err = json.Unmarshal(source, &c)
 	if err != nil {
-		panic(err)
+		defer InitializeDB(&ymlparser.Config{})
+		defer dropDB()
+		defer db.Unlock()
+		panic(err) //BUG: fix when change db
 	}
 
 	return c
@@ -146,7 +151,7 @@ func dropDB() { //Just for testing
 	if _, err := os.Stat(fileName); os.IsNotExist(err) {
 		return
 	}
-	fmt.Println(db.filepath)
+	log.Println(db.filepath)
 	var err = os.Remove(fileName)
 	if err != nil {
 		panic(err)
@@ -183,7 +188,6 @@ func writeProviderInfo(conf *ymlparser.Config) {
 
 	c := loadDBtoMemory()
 	c.Provider = conf.Provider
-	c.Version = conf.Version
 
 	writeToFile(c)
 }

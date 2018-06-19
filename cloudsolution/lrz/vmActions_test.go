@@ -84,16 +84,19 @@ func vmCalc(wantedVms []ymlparser.VM, currentVms []ymlparser.VM) map[string]int 
 func Test_d_Machines(t *testing.T) {
 
 	template := "m1.small"
-	numToDelete := 2
-	out := `INSTANCE	i-00039789			vm-10-155-209-43.cloud.mwn.de	running	none	39789			2018-06-15T22:51:19+02:00	default	eki-EA801065	eri-1FEE1144		monitoring-disabled		10.155.209.43
-	INSTANCE	i-00039792			vm-10-155-209-66.cloud.mwn.de	running	none	39792		m1.small	2018-06-16T17:50:16+02:00	default	eki-EA801065	eri-1FEE1144		monitoring-disabled		10.155.209.66
-	INSTANCE	i-00039793			vm-10-155-209-67.cloud.mwn.de	running	none	39793		m1.small	2018-06-16T18:05:38+02:00	default	eki-EA801065	eri-1FEE1144		monitoring-disabled		10.155.209.67`
+	numToDelete := 0
+	out := `INSTANCE	i-00039599			vm-10-155-209-58.cloud.mwn.de	running	none	39599		m1.large	2018-05-31T19:41:43+02:00	default	eki-EA801065	eri-1FEE1144		monitoring-disabled		10.155.209.58
+	INSTANCE	i-00039931	ami-00002826		vm-10-155-209-45.cloud.mwn.de	running	passakey	39931		m1.nano	2018-06-19T16:05:15+02:00	default	eki-EA801065	eri-1FEE1144monitoring-disabled		10.155.209.45
+	INSTANCE	i-00039932	ami-00002826		vm-10-155-209-61.cloud.mwn.de	running	passakey	39932		m1.small	2018-06-19T16:05:15+02:00	default	eki-EA801065	eri-1FEE1144		monitoring-disabled		10.155.209.61
+	INSTANCE	i-00039933	ami-00002826		vm-10-155-209-49.cloud.mwn.de	running	passakey	39933		m1.nano	2018-06-19T16:05:15+02:00	default	eki-EA801065	eri-1FEE1144monitoring-disabled		10.155.209.49`
 
 	a := strings.Split(string(out[:]), "\n")
 	var machineIDs []string
 	for _, line := range a {
 		if strings.Contains(line, template) {
-			mID := strings.Fields(line)[1]
+			mID := strings.Fields(line)[1] //1 because id is there
+			mName := strings.Split(strings.Fields(line)[3], ".")[0]
+			fmt.Println(mName)
 			fmt.Println(mID)
 			machineIDs = append(machineIDs, mID)
 		}

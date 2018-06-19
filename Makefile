@@ -44,3 +44,7 @@ server:
 dist:
 	env GOOS=linux GOARCH=amd64 go build -o build/passa_linux
 	go build -o build/passa_mac
+
+linux:
+	env GOOS=linux GOARCH=amd64 go build -o build/passa_linux
+	scp build/passa_linux  root@10.155.209.58:./Passa/.

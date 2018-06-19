@@ -53,13 +53,13 @@ func TestInitializeDB(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			InitializeDB()
+			InitializeDB(&ymlparser.Config{})
 		})
 	}
 }
 
 func Test_insertDB(t *testing.T) {
-	InitializeDB()
+	InitializeDB(&ymlparser.Config{})
 	type args struct {
 		newState ymlparser.State
 	}
@@ -82,9 +82,8 @@ func Test_insertDB(t *testing.T) {
 
 func Test_readAll(t *testing.T) {
 	dropDB()
-	InitializeDB()
+	InitializeDB(&ymlparser.Config{})
 	myConfig := ymlparser.Config{
-		Version: "0.8",
 		States: []ymlparser.State{
 			{
 				Name: "mystate1",
@@ -118,7 +117,7 @@ func Test_readAll(t *testing.T) {
 }
 
 func Test_dropDB(t *testing.T) {
-	InitializeDB()
+	InitializeDB(&ymlparser.Config{})
 	tests := []struct {
 		name string
 	}{

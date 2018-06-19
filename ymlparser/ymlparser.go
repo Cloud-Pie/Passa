@@ -2,8 +2,8 @@
 package ymlparser
 
 import (
-	"fmt"
 	"io/ioutil"
+	"log"
 	"time"
 
 	yaml "gopkg.in/yaml.v2"
@@ -32,7 +32,6 @@ type State struct {
 
 //Config provides data of the cloud infrastructure.
 type Config struct {
-	Version  string  `yaml:"version"`
 	States   []State `yaml:"states"`
 	Provider struct {
 		Name        string
@@ -56,7 +55,7 @@ func ParseStatesfile(configFile string) *Config {
 		panic(err)
 
 	}
-	fmt.Printf("Version %v\n", c.Version)
+	log.Printf("%s parsed correctly", configFile)
 
 	return c
 }

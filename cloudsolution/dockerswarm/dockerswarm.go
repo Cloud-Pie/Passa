@@ -205,7 +205,7 @@ func getSSHSession(machineIP string, machineName string) *ssh.Session {
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(signer),
 		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), //FIXME: fix security
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
 	client, err := ssh.Dial("tcp", machineIP+":22", config)
@@ -225,8 +225,8 @@ func getSSHSession(machineIP string, machineName string) *ssh.Session {
 //ChangeState changes the state of the system
 func (ds DockerSwarm) ChangeState(wantedState ymlparser.State) cloudsolution.CloudManagerInterface {
 	ds.isActivelyDeploying = true
-	if wantedState.VMs != nil {
-		//BUG: This is just a work around
+	if wantedState.VMs != nil { //There is no typing in docker swarm so take it like this.
+
 		totalVM := 0
 		for idx := range wantedState.VMs {
 			totalVM += wantedState.VMs[idx].Scale
@@ -331,10 +331,7 @@ func (ds DockerSwarm) GetLastDeployedState() ymlparser.State {
 
 //CheckState compares the actual state and the state we have deployed.
 func (ds DockerSwarm) CheckState() bool {
-	if ds.isActivelyDeploying { //BUG: This doesn't read with mutex, we will give wrong error eventually.
-		log.Println("Actively deploying new state")
-		return true
-	}
+
 	weDeployed := ds.GetLastDeployedState()
 	real := ds.GetActiveState() //SORT
 

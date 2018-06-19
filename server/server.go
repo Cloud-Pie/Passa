@@ -20,12 +20,15 @@ func SetupServer(sc chan *ymlparser.State) *gin.Engine {
 
 	r.GET("/", func(ctx *gin.Context) {
 
-		ctx.HTML(200, "index.html", r.Routes())
+		ctx.JSON(200, r.Routes())
 	})
 
 	r.GET("/ui/timeline", func(ctx *gin.Context) {
 
-		ctx.HTML(200, "timeline.html", config)
+		//ctx.HTML(200, "timeline.html", config)
+		ctx.JSON(200, gin.H{
+			"timeline": "Not working will be fixed in v1.1",
+		})
 	})
 
 	statesRest := r.Group("/api/states")

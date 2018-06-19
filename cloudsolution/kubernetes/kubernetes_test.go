@@ -50,6 +50,10 @@ func Test_Watch(t *testing.T) {
 		//fmt.Printf("%+v", apiv1.NodeCondition.SwaggerDoc())
 		fmt.Printf(" %v -> %v\n", node.Name, node.Status.Conditions[4].Status)
 
+		if node.Status.Conditions[4].Status != apiv1.ConditionTrue {
+			fmt.Printf("deleting %v\n", node.Name)
+			clientset.CoreV1().Nodes().Delete(node.Name, &metav1.DeleteOptions{})
+		}
 	}
 
 }

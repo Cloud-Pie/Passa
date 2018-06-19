@@ -37,6 +37,6 @@ func InitializeClient() (*telegramClient, error) {
 //Notify notifies the user with the preffered channel
 func (tc telegramClient) Notify(message string) {
 	msg := tgbotapi.NewMessage(tc.chatID, message)
-	//bot.Send(msg)
+	tc.bot.Send(msg)
 	log.Println(msg)
 }

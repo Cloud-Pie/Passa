@@ -17,7 +17,7 @@ import (
 
 func TestSetupServer(t *testing.T) {
 
-	r := SetupServer(testManager{}, make(chan *ymlparser.State, 30))
+	r := SetupServer(make(chan *ymlparser.State, 30))
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/", nil)
 	r.ServeHTTP(w, req)
@@ -38,7 +38,7 @@ func TestSetupServer(t *testing.T) {
 }
 func Test_getAllStates(t *testing.T) {
 
-	r := SetupServer(testManager{}, make(chan *ymlparser.State, 30))
+	r := SetupServer(make(chan *ymlparser.State, 30))
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/api/states/", nil)
 	r.ServeHTTP(w, req)
@@ -53,7 +53,7 @@ func Test_getAllStates(t *testing.T) {
 func Test_createState(t *testing.T) {
 
 	tc := make(chan *ymlparser.State, 30)
-	r := SetupServer(testManager{}, tc)
+	r := SetupServer(tc)
 	stateNum := len(database.ReadAllStates())
 	tests := []struct {
 		name          string
@@ -121,7 +121,7 @@ func Test_createState(t *testing.T) {
 
 func Test_getSingleState(t *testing.T) {
 
-	r := SetupServer(testManager{}, make(chan *ymlparser.State, 30))
+	r := SetupServer(make(chan *ymlparser.State, 30))
 
 	tests := []struct {
 		name         string
@@ -155,7 +155,7 @@ func Test_getSingleState(t *testing.T) {
 
 func Test_updateState(t *testing.T) {
 
-	r := SetupServer(testManager{}, make(chan *ymlparser.State, 30))
+	r := SetupServer(make(chan *ymlparser.State, 30))
 
 	tests := []struct {
 		name          string
@@ -202,7 +202,7 @@ func Test_updateState(t *testing.T) {
 
 func Test_deleteState(t *testing.T) {
 
-	r := SetupServer(testManager{}, make(chan *ymlparser.State, 30))
+	r := SetupServer(make(chan *ymlparser.State, 30))
 
 	tests := []struct {
 		name           string
@@ -251,7 +251,7 @@ func Test_deleteState(t *testing.T) {
 
 func Test_test(t *testing.T) {
 
-	r := SetupServer(testManager{}, make(chan *ymlparser.State, 30))
+	r := SetupServer(make(chan *ymlparser.State, 30))
 	w := httptest.NewRecorder()
 	myTime := time.Now()
 	myState := ymlparser.State{
@@ -292,9 +292,7 @@ func (testManager) CheckState() bool {
 }
 
 func Test_getCurrentState(t *testing.T) {
-	tm := testManager{
-		name: "test",
-	}
-	r := SetupServer(tm, make(chan *ymlparser.State, 30))
+
+	r := SetupServer(make(chan *ymlparser.State, 30))
 	r.Run(":7000")
 }

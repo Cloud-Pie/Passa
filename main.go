@@ -26,7 +26,7 @@ import (
 
 const (
 	defaultLogFile       = "test.log"
-	defaultYMLFile       = "test/passa-states-test.yml"
+	defaultYMLFile       = "passa-states.yml"
 	defaultCheckInterval = 20 //secs
 )
 
@@ -34,9 +34,13 @@ var notifier notification.NotifierInterface
 var flagVars flagVariable
 var cloudManager cloudsolution.CloudManagerInterface
 
+var isCurrentlyDeploying bool
+var isStateTrue bool
+
 func main() {
 	styleEntry()
 	var err error
+	log.SetFlags(log.Ldate | log.Ltime)
 
 	stateChannel := make(chan *ymlparser.State) //Communication between server states and our scheduler
 	flagVars = parseFlags()
@@ -46,7 +50,12 @@ func main() {
 	notifier, err = telegram.InitializeClient()
 
 	if err != nil {
+		log.Println(err)
+		log.Println("console")
 		notifier = consoleprinter.InitializeClient()
+	} else {
+		log.Println("telegram")
+		notifier.Notify("telegram connected to Passa")
 	}
 	//Notifier code End
 
@@ -56,7 +65,7 @@ func main() {
 		if c.Provider.Name == "docker-swarm" {
 			cloudManager = dockerswarm.NewSwarmManager(c.Provider.ManagerIP)
 		} else if c.Provider.Name == "lrz" {
-			cloudManager = lrz.NewLRZManager(c.Provider.Username, c.Provider.Password, c.Provider.ConfigFile)
+			cloudManager = lrz.NewLRZManager(c.Provider.Username, c.Provider.Password, c.Provider.ConfigFile, c.Provider.JoinCommand)
 		}
 	}
 
@@ -84,17 +93,18 @@ func main() {
 			gin.H{
 				"lastDeployed": cloudManager.GetLastDeployedState(),
 				"active":       cloudManager.GetActiveState(),
+				"isStateTrue":  isStateTrue,
 			})
 	})
-	log.Println("Server listening on port 8080")
-	server.Run()
+	log.Println("Server listening on port 5555")
+	server.Run(":5555")
 	//Server code End
 }
 
 //Most important function in the whole project !!
 func schedulerRoutine(stateChannel chan *ymlparser.State, cm cloudsolution.CloudManagerInterface) {
 	for incomingState := range stateChannel {
-		if time.Now().After(incomingState.ISODate) {
+		if time.Now().After(incomingState.ISODate) && false { //FIXME: remove && false
 			log.Printf("%s is a past state, not deploying\n", incomingState.Name)
 			database.InsertState(*incomingState)
 		} else {
@@ -112,8 +122,11 @@ func scale(s ymlparser.State) func() {
 	return func() {
 
 		if !flagVars.noCloud {
+			isCurrentlyDeploying = true
 			cloudManager = cloudManager.ChangeState(s)
-			fmt.Printf("%#v", cloudManager.GetLastDeployedState())
+			log.Printf("%#v", cloudManager.GetLastDeployedState())
+			isCurrentlyDeploying = false
+
 		}
 		notifier.Notify("Deployed " + s.Name)
 
@@ -159,11 +172,20 @@ func parseFlags() flagVariable {
 func periodicCheckRoutine() {
 
 	sleepDuration := time.Duration(flagVars.checkStatusInterval) * time.Second
+	//time.Sleep(sleepDuration)
 	for ; ; time.Sleep(sleepDuration) {
-		if !cloudManager.CheckState() {
-			log.Println("False State")
+
+		if isCurrentlyDeploying {
+			log.Println("Actively Deploying new State...")
 		} else {
-			log.Println("System checked, everything is fine...")
+			switch isStateTrue = cloudManager.CheckState(); isStateTrue {
+			case true:
+				log.Println("State checked, everything is fine")
+			case false:
+				log.Println("False State")
+
+			}
+
 		}
 	}
 }
