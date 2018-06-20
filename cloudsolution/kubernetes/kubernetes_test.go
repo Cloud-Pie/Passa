@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	apiv1 "k8s.io/api/core/v1"
@@ -50,10 +51,12 @@ func Test_Watch(t *testing.T) {
 		//fmt.Printf("%+v", apiv1.NodeCondition.SwaggerDoc())
 		fmt.Printf(" %v -> %v\n", node.Name, node.Status.Conditions[4].Status)
 
-		if node.Status.Conditions[4].Status != apiv1.ConditionTrue {
-			fmt.Printf("deleting %v\n", node.Name)
-			clientset.CoreV1().Nodes().Delete(node.Name, &metav1.DeleteOptions{})
+		for k := range node.GetLabels() {
+			if strings.Contains(k, "master") {
+				fmt.Printf("**%s is master**", node.Name)
+			}
 		}
+		fmt.Printf("%v", node.Labels)
 	}
 
 }

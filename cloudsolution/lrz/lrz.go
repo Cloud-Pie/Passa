@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/Cloud-Pie/Passa/cloudsolution"
@@ -18,7 +19,7 @@ import (
 
 const scriptFilename = "lrzscript.sh"
 const bashCommand = "#!/usr/bin/env bash"
-const deploymentTimeout = 60 * time.Second
+const deploymentTimeout = 120 * time.Second
 
 //Lrz keeps the data needed for econe and kubernetes interfaces.
 type Lrz struct {
@@ -49,6 +50,16 @@ func NewLRZManager(username, password, configFile string, joinCommand string) Lr
 	data := []byte(fmt.Sprintf("%s\n%s", bashCommand, joinCommand))
 	ioutil.WriteFile(scriptFilename, data, 0644)
 
+	nodesList, err := clientset.CoreV1().Nodes().List(metav1.ListOptions{})
+
+	for _, node := range nodesList.Items {
+		for k := range node.GetLabels() {
+			if strings.Contains(k, "master") {
+				log.Printf("%s is MASTER", node.Name)
+				cs.econe.masterNode = node.Name
+			}
+		}
+	}
 	cs.lastDeployedState = cs.GetActiveState()
 	return cs
 }

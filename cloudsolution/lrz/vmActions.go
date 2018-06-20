@@ -27,8 +27,9 @@ const getInstancesCommand = "euca-describe-instances -I %s -S %s -U %s | grep ru
 const terminateInstancesCommand = "euca-terminate-instances %s -I %s -S %s -U %s"
 
 type econe struct {
-	username string
-	password string
+	username   string
+	password   string
+	masterNode string
 }
 
 func (ec econe) createNewKeypair() error {
@@ -75,9 +76,17 @@ func (ec econe) deleteMachine(currentVMState []string, templateType string, numT
 		if strings.Contains(line, templateType) {
 			mID := strings.Fields(line)[1]
 			mName := strings.Split(strings.Fields(line)[3], ".")[0]
-			machineIDs = append(machineIDs, mID)
-			machineNames = append(machineNames, mName)
-			index++
+
+			if strings.Contains(line, ec.masterNode) {
+				log.Printf("%s is MASTER, can't delete", mName)
+				log.Printf("MASTER node is running on %s", templateType)
+
+			} else {
+				machineNames = append(machineNames, mName)
+				machineIDs = append(machineIDs, mID)
+				index++
+			}
+
 			if index == numToDelete { //early exit
 				break
 			}
