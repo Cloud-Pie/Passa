@@ -3,7 +3,9 @@ package telegram
 
 import (
 	"errors"
-	"log"
+
+	"github.com/op/go-logging"
+
 	"os"
 	"strconv"
 
@@ -16,6 +18,9 @@ type telegramClient struct {
 	chatID int64
 }
 
+var log = logging.MustGetLogger("passa")
+
+//InitializeClient starts the telegram client
 func InitializeClient() (*telegramClient, error) {
 	telegramToken := os.Getenv("telegramToken")
 	if telegramToken == "" {
@@ -30,7 +35,7 @@ func InitializeClient() (*telegramClient, error) {
 		return nil, err
 	}
 
-	log.Printf("Authorized on account %s", bot.Self.UserName)
+	log.Debug("Authorized on account %s", bot.Self.UserName)
 	return &telegramClient{bot: bot, chatID: chatID}, nil
 }
 
@@ -38,5 +43,4 @@ func InitializeClient() (*telegramClient, error) {
 func (tc telegramClient) Notify(message string) {
 	msg := tgbotapi.NewMessage(tc.chatID, message)
 	tc.bot.Send(msg)
-	log.Println(msg)
 }

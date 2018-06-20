@@ -3,10 +3,11 @@ package lrz
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/op/go-logging"
 
 	"github.com/Cloud-Pie/Passa/cloudsolution"
 	"github.com/Cloud-Pie/Passa/ymlparser"
@@ -20,6 +21,8 @@ import (
 const scriptFilename = "lrzscript.sh"
 const bashCommand = "#!/usr/bin/env bash"
 const deploymentTimeout = 120 * time.Second
+
+var log = logging.MustGetLogger("passa")
 
 //Lrz keeps the data needed for econe and kubernetes interfaces.
 type Lrz struct {
@@ -37,7 +40,7 @@ func NewLRZManager(username, password, configFile string, joinCommand string) Lr
 	}
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		log.Fatal("Cannot not connect to kubernetes cluster , exiting...")
+		log.Fatal("Cannot connect to kubernetes cluster , exiting...")
 	}
 	cs := Lrz{
 		econe: econe{
@@ -46,7 +49,7 @@ func NewLRZManager(username, password, configFile string, joinCommand string) Lr
 		},
 		kube: clientset,
 	}
-	log.Println("Adding join token to file")
+	log.Debug("Adding join token to file")
 	data := []byte(fmt.Sprintf("%s\n%s", bashCommand, joinCommand))
 	ioutil.WriteFile(scriptFilename, data, 0644)
 
@@ -55,7 +58,7 @@ func NewLRZManager(username, password, configFile string, joinCommand string) Lr
 	for _, node := range nodesList.Items {
 		for k := range node.GetLabels() {
 			if strings.Contains(k, "master") {
-				log.Printf("%s is MASTER", node.Name)
+				log.Warning("%s is MASTER", node.Name)
 				cs.econe.masterNode = node.Name
 			}
 		}
@@ -72,16 +75,16 @@ func (l Lrz) ChangeState(wantedState ymlparser.State) cloudsolution.CloudManager
 		start := time.Now()
 		for ; time.Since(start) < deploymentTimeout; time.Sleep(10 * time.Second) {
 
-			log.Println("waiting for VM to deploy")
+			log.Info("waiting for VM to deploy")
 			if areVMsCorrect(wantedState.VMs, l.econe.getVMs()) {
-				log.Println("Vms deployed")
+				log.Notice("Vms deployed")
 				break //FIXME: to a variable
 			}
 
 		}
 
 		if !(time.Since(start) < deploymentTimeout) { //timeout exceed
-			log.Println("VM deployment timeout, moving on...")
+			log.Warning("VM deployment timeout, moving on...")
 		}
 
 		start = time.Now()
@@ -103,20 +106,20 @@ func (l Lrz) ChangeState(wantedState ymlparser.State) cloudsolution.CloudManager
 			}
 
 			if nodesInKube != totalNumberofVMs {
-				log.Printf("kube nodes:%v , vm number: %v\n", nodesInKube, totalNumberofVMs)
+				log.Debug("kube nodes:%v , vm number: %v\n", nodesInKube, totalNumberofVMs)
 			} else {
-				log.Printf("Kubernetes configured, node count: %v", nodesInKube)
+				log.Info("Kubernetes configured, node count: %v", nodesInKube)
 				break //FIXME: with a variable
 			}
-			log.Println("waiting for VMs to join kubernetes")
+			log.Info("waiting for VMs to join kubernetes")
 
 		}
 		if !(time.Since(start) < deploymentTimeout) { //timeout exceed
-			log.Println("Kubernetes join timeout, moving on...")
+			log.Warning("Kubernetes join timeout, moving on...")
 		}
 
 	} else {
-		log.Printf("%s has no VM state, keeping current configuration", wantedState.Name)
+		log.Debug("%s has no VM state, keeping current configuration", wantedState.Name)
 	}
 
 	for _, service := range wantedState.Services {
@@ -154,7 +157,7 @@ func (l Lrz) CheckState() bool {
 
 		return true
 	}
-	log.Printf("ERROR:\ndepl: %#v\nreal: %#v", weDeployed, real)
+	log.Error("ERROR:\ndepl: %#v\nreal: %#v", weDeployed, real)
 	return false
 }
 
@@ -179,7 +182,7 @@ func (l Lrz) getServiceCount() []ymlparser.Service {
 
 func (l Lrz) scaleContainers(serviceName string, scaleNum int) string {
 
-	log.Println("Updating Services...")
+	log.Info("Updating Services...")
 	deploymentsClient := l.kube.AppsV1().Deployments(apiv1.NamespaceDefault)
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		// Retrieve the latest version of Deployment before attempting update
@@ -198,7 +201,7 @@ func (l Lrz) scaleContainers(serviceName string, scaleNum int) string {
 	if retryErr != nil {
 		panic(fmt.Errorf("Update failed: %v", retryErr))
 	}
-	log.Println("Updated deployment...")
+	log.Notice("Updated deployment...")
 
 	return ""
 }

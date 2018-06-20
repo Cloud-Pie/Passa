@@ -6,7 +6,9 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"log"
+
+	"github.com/op/go-logging"
+
 	"os"
 	"os/exec"
 	"reflect"
@@ -20,6 +22,8 @@ import (
 	"github.com/Cloud-Pie/Passa/ymlparser"
 	"golang.org/x/crypto/ssh"
 )
+
+var log = logging.MustGetLogger("passa")
 
 //DockerSwarm keeps joinToken and managerIP of the system
 type DockerSwarm struct {
@@ -272,7 +276,7 @@ func (ds DockerSwarm) ChangeState(wantedState ymlparser.State) cloudsolution.Clo
 
 		}
 	} else {
-		log.Printf("%s has no VM state, keeping current...", wantedState.Name)
+		log.Debug("%s has no VM state, keeping current...", wantedState.Name)
 	}
 	for _, service := range wantedState.Services {
 		fmt.Println("scaling")
@@ -345,11 +349,11 @@ func (ds DockerSwarm) CheckState() bool {
 
 	real.ISODate = weDeployed.ISODate //server return zero ISODate and is equal check fails otherwise
 	if reflect.DeepEqual(weDeployed, real) {
-		log.Println("State holds")
+		log.Info("State holds")
 		return true
 	}
 
-	log.Printf("ERROR: \ndepl: %#v\nreal: %#v\n", weDeployed, real)
+	log.Error("ERROR: \ndepl: %#v\nreal: %#v\n", weDeployed, real)
 	return false
 }
 

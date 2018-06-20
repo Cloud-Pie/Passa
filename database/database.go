@@ -3,7 +3,8 @@ package database
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+
+	"github.com/op/go-logging"
 
 	"github.com/Cloud-Pie/Passa/ymlparser"
 
@@ -11,6 +12,7 @@ import (
 )
 
 var db *scribble.Driver
+var log = logging.MustGetLogger("passa")
 
 const dbName = "state"
 const dir = "./.db/"
@@ -20,7 +22,7 @@ func InitializeDB() {
 	var err error
 	db, err = scribble.New(dir, nil)
 	if err != nil {
-		log.Println("Database not initialized...")
+		log.Error("Database not initialized...")
 	}
 }
 
@@ -34,7 +36,7 @@ func GetSingleState(stateName string) ymlparser.State {
 
 	state := ymlparser.State{}
 	if err := db.Read(dbName, stateName, &state); err != nil {
-		log.Printf("Couldn't get %s", stateName)
+		log.Warning("Couldn't get %s", stateName)
 		return ymlparser.State{}
 	}
 	return state
@@ -45,7 +47,7 @@ func GetSingleState(stateName string) ymlparser.State {
 func ReadAllStates() []ymlparser.State {
 	records, err := db.ReadAll(dbName)
 	if err != nil {
-		log.Println("Error", err)
+		log.Error("Error", err)
 		return nil
 	}
 	returnStates := []ymlparser.State{}

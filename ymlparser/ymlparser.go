@@ -3,11 +3,14 @@ package ymlparser
 
 import (
 	"io/ioutil"
-	"log"
+
 	"time"
 
+	logging "github.com/op/go-logging"
 	yaml "gopkg.in/yaml.v2"
 )
+
+var log = logging.MustGetLogger("passa")
 
 //Service keeps the name and scale of the scaled service.
 type Service struct {
@@ -55,7 +58,7 @@ func ParseStatesfile(configFile string) *Config {
 		panic(err)
 
 	}
-	log.Printf("%s parsed correctly", configFile)
+	log.Debug("%s parse correctly", configFile)
 
 	return c
 }

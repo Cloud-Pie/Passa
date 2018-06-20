@@ -5,9 +5,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -22,6 +20,7 @@ import (
 	"github.com/Cloud-Pie/Passa/notification/telegram"
 	"github.com/Cloud-Pie/Passa/server"
 	"github.com/Cloud-Pie/Passa/ymlparser"
+	"github.com/op/go-logging"
 )
 
 const (
@@ -36,11 +35,17 @@ var cloudManager cloudsolution.CloudManagerInterface
 
 var isCurrentlyDeploying bool
 var isStateTrue bool
+var log = logging.MustGetLogger("passa")
+var format = logging.MustStringFormatter(
+	`%{color}%{time:15:04:05.000} %{shortfunc} ▶ %{level:.4s} %{id:03x}%{color:reset} %{message}`,
+)
 
 func main() {
 	styleEntry()
 	var err error
-	log.SetFlags(log.Ldate | log.Ltime)
+	backend2 := logging.NewLogBackend(os.Stderr, "", 0)
+	backend2Formatter := logging.NewBackendFormatter(backend2, format)
+	logging.SetBackend(backend2Formatter)
 
 	stateChannel := make(chan *ymlparser.State) //Communication between server states and our scheduler
 	flagVars = parseFlags()
@@ -50,12 +55,13 @@ func main() {
 	notifier, err = telegram.InitializeClient()
 
 	if err != nil {
-		log.Println(err)
-		log.Println("console")
+		log.Debug("Can't connect telegram")
+		log.Info("console")
 		notifier = consoleprinter.InitializeClient()
 	} else {
-		log.Println("telegram")
-		notifier.Notify("telegram connected to Passa")
+		log.Info("telegram")
+		compName, _ := os.Hostname()
+		notifier.Notify(fmt.Sprintf("Passa connected to telegram at %s", compName))
 	}
 	//Notifier code End
 
@@ -76,7 +82,7 @@ func main() {
 		if !c.States[idx].ISODate.IsZero() {
 			stateChannel <- &c.States[idx]
 		} else {
-			log.Printf("Invalid time for: %s", c.States[idx].Name)
+			log.Warning("Invalid time for: %s", c.States[idx].Name)
 		}
 	}
 	//Code For Cloud Management End
@@ -96,7 +102,7 @@ func main() {
 				"isStateTrue":  isStateTrue,
 			})
 	})
-	log.Println("Server listening on port 5555")
+	log.Info("Server listening on port 5555")
 	server.Run(":5555")
 	//Server code End
 }
@@ -105,7 +111,7 @@ func main() {
 func schedulerRoutine(stateChannel chan *ymlparser.State, cm cloudsolution.CloudManagerInterface) {
 	for incomingState := range stateChannel {
 		if time.Now().After(incomingState.ISODate) && false { //FIXME: remove && false
-			log.Printf("%s is a past state, not deploying\n", incomingState.Name)
+			log.Notice("%s is a past state, not deploying\n", incomingState.Name)
 			database.InsertState(*incomingState)
 		} else {
 			durationUntilStateChange := incomingState.ISODate.Sub(time.Now())
@@ -124,27 +130,13 @@ func scale(s ymlparser.State) func() {
 		if !flagVars.noCloud {
 			isCurrentlyDeploying = true
 			cloudManager = cloudManager.ChangeState(s)
-			log.Printf("%#v", cloudManager.GetLastDeployedState())
+			log.Info("%#v", cloudManager.GetLastDeployedState())
 			isCurrentlyDeploying = false
 
 		}
 		notifier.Notify("Deployed " + s.Name)
 
 	}
-}
-
-func setLogFile(lf string) string {
-	if lf == "" {
-		lf = defaultLogFile
-	}
-	fmt.Println("Writing log to  -> ", lf)
-	os.MkdirAll(filepath.Dir(lf), 0700)
-	f, err := os.OpenFile(lf, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		panic(err)
-	}
-	log.SetOutput(f)
-	return lf
 }
 
 type flagVariable struct {
@@ -176,13 +168,13 @@ func periodicCheckRoutine() {
 	for ; ; time.Sleep(sleepDuration) {
 
 		if isCurrentlyDeploying {
-			log.Println("Actively Deploying new State...")
+			log.Notice("Actively Deploying new State...")
 		} else {
 			switch isStateTrue = cloudManager.CheckState(); isStateTrue {
 			case true:
-				log.Println("State checked, everything is fine")
+				log.Info("State checked, everything is fine")
 			case false:
-				log.Println("False State")
+				log.Warning("False State")
 
 			}
 

@@ -3,7 +3,7 @@ package lrz
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
+
 	"os/exec"
 	"strings"
 
@@ -13,13 +13,13 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-var types = []string{"m1.small", "m1.large", "m1.nano"}
+var types = []string{"t1.micro", "m1.nano", "m1.small", "m1.large", "m1.xlarge", "m2.xlarge", "c1.medium", "c1.xlarge", "m2.2xlarge", "m2.4xlarge", "cc1.4xlarge"}
 
 const ec2URL = "https://www.cloud.mwn.de:22"
 const privateKeyLine = "-----BEGIN RSA PRIVATE KEY-----"
 const keyName = "passakey"
 const keyFileName = "lrzkey.private"
-const vmImage = "ami-00002826" //FIXME: might be wrong
+const vmImage = "ami-00002826"
 
 const createKeypairCommand = "econe-create-keypair %s -I %s -S %s -U %s"
 const runInstanceCommand = "euca-run-instances -t %s -k %s -n %v -f %s %s -I %s -S %s -U %s"
@@ -78,8 +78,8 @@ func (ec econe) deleteMachine(currentVMState []string, templateType string, numT
 			mName := strings.Split(strings.Fields(line)[3], ".")[0]
 
 			if strings.Contains(line, ec.masterNode) {
-				log.Printf("%s is MASTER, can't delete", mName)
-				log.Printf("MASTER node is running on %s", templateType)
+				log.Error("%s is MASTER, can't delete", mName)
+				log.Notice("MASTER node is running on %s", templateType)
 
 			} else {
 				machineNames = append(machineNames, mName)
@@ -98,7 +98,7 @@ func (ec econe) deleteMachine(currentVMState []string, templateType string, numT
 	exec.Command("sh", "-c", c).Output()
 
 	for _, machineName := range machineNames {
-		log.Printf("deleting machine %v", machineName)
+		log.Info("deleting machine %v", machineName)
 		kube.CoreV1().Nodes().Delete(machineName, &metav1.DeleteOptions{})
 	}
 
@@ -122,16 +122,16 @@ func (ec econe) scaleVms(wantedVms []ymlparser.VM, kube *kubernetes.Clientset) {
 	for _, t := range types {
 		if _, found := wantedMap[t]; found {
 			diffMap[t] = wantedMap[t] - currentMap[t]
-			log.Printf("changing state of %s\n", t)
+			log.Notice("changing state of %s\n", t)
 		} else {
-			log.Printf("No change in %s\n", t)
+			log.Info("No change in %s\n", t)
 		}
 	}
 
 	currentVMState, _ := exec.Command("sh", "-c", fmt.Sprintf(getInstancesCommand, ec.username, ec.password, ec2URL)).Output()
 
 	a := strings.Split(string(currentVMState[:]), "\n")
-	log.Printf("%v", diffMap)
+	log.Debug("%v", diffMap)
 	for changingTypes := range diffMap {
 		numDiff := diffMap[changingTypes]
 		switch {

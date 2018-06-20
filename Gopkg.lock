@@ -191,6 +191,12 @@
   revision = "f328a97d7ce2445d27e611065eb0483cbd97343b"
 
 [[projects]]
+  name = "github.com/op/go-logging"
+  packages = ["."]
+  revision = "b2cb9fa56473e98db8caba80237377e83fe44db5"
+  version = "v1"
+
+[[projects]]
   branch = "master"
   name = "github.com/petar/GoLLRB"
   packages = ["llrb"]
@@ -441,6 +447,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ab4448cb63e21ff0f728cda79d52777bebe4c47de6f75da8f3ace29de5b9232f"
+  inputs-digest = "9bfc3c2fb8695560636c1f86a269c440e38da043047f48e39a880fccde2b6a76"
   solver-name = "gps-cdcl"
   solver-version = 1
