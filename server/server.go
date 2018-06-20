@@ -73,14 +73,8 @@ func getAllStates(c *gin.Context) {
 }
 func getSingleState(c *gin.Context) {
 	name := c.Params.ByName("name")
-	postToReturn, err := database.GetSingleState(name)
-	if err != nil {
-		c.JSON(422, gin.H{"error": "Not Found!"})
-
-	} else {
-
-		c.JSON(200, postToReturn)
-	}
+	postToReturn := database.GetSingleState(name)
+	c.JSON(200, postToReturn)
 
 }
 func updateState(c *gin.Context) {

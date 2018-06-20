@@ -11,3 +11,4 @@ test/kubeconfig.txt
 test/mycube.txt
 *.conf
 *.private
+.db

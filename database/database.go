@@ -1,193 +1,79 @@
-//Package database provides functions for database
 package database
 
 import (
 	"encoding/json"
-	"errors"
-	"io/ioutil"
+	"fmt"
 	"log"
-	"os"
-	"sync"
 
 	"github.com/Cloud-Pie/Passa/ymlparser"
+
+	"github.com/nanobox-io/golang-scribble"
 )
 
-type myDataBase struct {
-	filepath string
-	sync.Mutex
-}
+var db *scribble.Driver
 
-var db myDataBase
+const dbName = "state"
+const dir = "./.db/"
 
-const fileName = ".db.json"
-
-//InitializeDB initializes a new no-sql Database.
-func InitializeDB(c *ymlparser.Config) {
-	log.Println("Initializing database....")
-	db = myDataBase{
-		filepath: fileName,
+//InitializeDB initializes the database
+func InitializeDB() {
+	var err error
+	db, err = scribble.New(dir, nil)
+	if err != nil {
+		log.Println("Database not initialized...")
 	}
-	var file *os.File
-	if _, err := os.Stat(db.filepath); os.IsNotExist(err) {
-		file, err = os.Create(db.filepath)
-		if err != nil {
-			panic(err)
-		}
-		dbByte, err := json.Marshal(&ymlparser.Config{})
-		if err != nil {
-			panic(err)
-		}
-		file.Write(dbByte)
-		defer file.Close()
-		writeProviderInfo(c)
-		log.Printf("database created in %s", fileName)
-	} else {
-		log.Println("database already exists")
-	}
-
 }
 
-//ReadConfig reads the whole config.
-func ReadConfig() ymlparser.Config {
-	db.Lock()
-	defer db.Unlock()
-	c := loadDBtoMemory()
-	return c
-}
-
-//InsertState inserts state in to the database
+//InsertState inserts state to DB
 func InsertState(newState ymlparser.State) {
-
-	db.Lock()
-	defer db.Unlock()
-
-	c := loadDBtoMemory()
-	pos := searchQuery(c.States, newState.Name)
-	if pos != -1 {
-		log.Printf("%s exists,updating...", newState.Name)
-		c.States[pos] = newState
-	} else {
-		log.Printf("Inserting %s", newState.Name)
-		c.States = append(c.States, newState)
-	}
-
-	writeToFile(c)
+	db.Write(dbName, newState.Name, newState)
 }
 
-//ReadAllStates reads all the states from the database
+//GetSingleState returns single state
+func GetSingleState(stateName string) ymlparser.State {
+
+	state := ymlparser.State{}
+	if err := db.Read(dbName, stateName, &state); err != nil {
+		log.Printf("Couldn't get %s", stateName)
+		return ymlparser.State{}
+	}
+	return state
+
+}
+
+//ReadAllStates returns all states
 func ReadAllStates() []ymlparser.State {
-	log.Println("Reading all states")
-	c := loadDBtoMemory()
-	return c.States
-
-}
-
-//SearchQuery returns the index of the state in config file
-func searchQuery(currentStates []ymlparser.State, searchName string) int {
-
-	for idx := range currentStates {
-		if currentStates[idx].Name == searchName {
-			return idx
+	records, err := db.ReadAll(dbName)
+	if err != nil {
+		log.Println("Error", err)
+		return nil
+	}
+	returnStates := []ymlparser.State{}
+	for _, f := range records {
+		stateFound := ymlparser.State{}
+		if err := json.Unmarshal([]byte(f), &stateFound); err != nil {
+			fmt.Println("Error", err)
 		}
+		returnStates = append(returnStates, stateFound)
 	}
-	return -1
+	return returnStates
 }
 
-func loadDBtoMemory() ymlparser.Config {
-	if db.filepath == "" {
-		panic(errors.New("No DB initialized"))
-	}
-	var c ymlparser.Config
+//DeleteState deletes state with that name
+func DeleteState(deleteName string) error {
+	var err error
+	if err = db.Delete(dbName, deleteName); err != nil {
+		fmt.Println("Error", err)
 
-	source, err := ioutil.ReadFile(db.filepath)
-	if err != nil {
-		panic(err)
 	}
-	err = json.Unmarshal(source, &c)
-	if err != nil {
-		defer InitializeDB(&ymlparser.Config{})
-		defer dropDB()
-		defer db.Unlock()
-		panic(err) //BUG: fix when change db
-	}
-
-	return c
-
+	return err
 }
 
-//UpdateState updates the state with the given name
-func UpdateState(updatedState ymlparser.State, oldStateName string) error {
-	db.Lock()
-	log.Printf("Updating state %s to  %v", oldStateName, updatedState)
-	defer db.Unlock()
-	c := loadDBtoMemory()
-	pos := searchQuery(c.States, oldStateName)
-	if pos == -1 {
-		return errors.New("No state with that name")
+//UpdateState updates state
+func UpdateState(newState ymlparser.State, oldStateName string) error {
+	var err error
+	if err = db.Write(dbName, oldStateName, newState); err != nil {
+		fmt.Println("Error", err)
 	}
-	c.States[pos] = updatedState
-	writeToFile(c)
-	return nil
-}
-
-//DeleteState deletes the state with the given name
-func DeleteState(stateToDelete string) error {
-	db.Lock()
-	log.Printf("Deleting state: %v", stateToDelete)
-	defer db.Unlock()
-	c := loadDBtoMemory()
-	pos := searchQuery(c.States, stateToDelete)
-	if pos == -1 {
-		return errors.New("No state with that name")
-	}
-	c.States[pos] = c.States[len(c.States)-1]
-	c.States[len(c.States)-1] = ymlparser.State{}
-	c.States = c.States[:len(c.States)-1]
-	writeToFile(c)
-	return nil
-}
-func dropDB() { //Just for testing
-	log.Print("Dropping database...")
-	if _, err := os.Stat(fileName); os.IsNotExist(err) {
-		return
-	}
-	log.Println(db.filepath)
-	var err = os.Remove(fileName)
-	if err != nil {
-		panic(err)
-	}
-
-}
-
-func writeToFile(c ymlparser.Config) {
-	dbByte, err := json.Marshal(&c)
-	if err != nil {
-		panic(err)
-	}
-
-	f, _ := os.OpenFile(db.filepath, os.O_RDWR, 0644)
-	defer f.Close()
-	f.Write(dbByte)
-}
-
-//GetSingleState gets the state with the given name
-func GetSingleState(stateName string) (ymlparser.State, error) {
-	log.Printf("Getting state: %s", stateName)
-	c := loadDBtoMemory()
-	pos := searchQuery(c.States, stateName)
-	if pos == -1 {
-		return ymlparser.State{}, errors.New("No state found")
-	}
-	return c.States[pos], nil
-}
-
-func writeProviderInfo(conf *ymlparser.Config) {
-	db.Lock()
-	log.Println("Inserting provider info")
-	defer db.Unlock()
-
-	c := loadDBtoMemory()
-	c.Provider = conf.Provider
-
-	writeToFile(c)
+	return err
 }

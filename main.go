@@ -45,7 +45,7 @@ func main() {
 	stateChannel := make(chan *ymlparser.State) //Communication between server states and our scheduler
 	flagVars = parseFlags()
 	c := ymlparser.ParseStatesfile(flagVars.configFile)
-	database.InitializeDB(c)
+	database.InitializeDB()
 	//Notifier code Start
 	notifier, err = telegram.InitializeClient()
 
