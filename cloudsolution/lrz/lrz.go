@@ -189,7 +189,8 @@ func (l Lrz) scaleContainers(serviceName string, scaleNum int) string {
 		// RetryOnConflict uses exponential backoff to avoid exhausting the apiserver
 		result, getErr := deploymentsClient.Get(serviceName, metav1.GetOptions{})
 		if getErr != nil {
-			panic(fmt.Errorf("Failed to get latest version of Deployment: %v", getErr))
+			log.Critical("Failed to get latest version of Deployment: %v", getErr)
+
 		}
 
 		sn := int32(scaleNum)
@@ -199,7 +200,7 @@ func (l Lrz) scaleContainers(serviceName string, scaleNum int) string {
 		return updateErr
 	})
 	if retryErr != nil {
-		panic(fmt.Errorf("Update failed: %v", retryErr))
+		log.Critical("Update failed: %v", retryErr)
 	}
 	log.Notice("Updated deployment...")
 
