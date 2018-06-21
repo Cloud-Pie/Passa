@@ -51,18 +51,16 @@ func (ec econe) createNewVM(templateType string, vmNum int) error {
 	return err
 }
 
-func (ec econe) getVMs() []ymlparser.VM {
+func (ec econe) getVMs() ymlparser.VM {
 
-	vms := []ymlparser.VM{}
+	vms := ymlparser.VM{}
 	// only get running machines
 	out, _ := exec.Command("sh", "-c", fmt.Sprintf(getInstancesCommand, ec.username, ec.password, ec2URL)).Output()
 
 	for _, t := range types {
 
-		vms = append(vms, ymlparser.VM{
-			Type:  t,
-			Scale: strings.Count(string(out), t),
-		})
+		vms[t] = strings.Count(string(out), t)
+
 	}
 	return vms
 }
@@ -105,26 +103,14 @@ func (ec econe) deleteMachine(currentVMState []string, templateType string, numT
 	return nil
 }
 
-func (ec econe) scaleVms(wantedVms []ymlparser.VM, kube *kubernetes.Clientset) {
-	currentVms := ec.getVMs()
-	wantedMap := make(map[string]int)
-	currentMap := make(map[string]int)
+func (ec econe) scaleVms(wantedMap ymlparser.VM, kube *kubernetes.Clientset) {
+	currentMap := ec.getVMs()
 	//wanted - current
-	for _, vm := range wantedVms {
-		wantedMap[vm.Type] = vm.Scale
-	}
-
-	for _, vm := range currentVms {
-		currentMap[vm.Type] = vm.Scale
-	}
 
 	diffMap := make(map[string]int)
 	for _, t := range types {
 		if _, found := wantedMap[t]; found {
 			diffMap[t] = wantedMap[t] - currentMap[t]
-			log.Notice("changing state of %s\n", t)
-		} else {
-			log.Info("No change in %s\n", t)
 		}
 	}
 
@@ -136,12 +122,15 @@ func (ec econe) scaleVms(wantedVms []ymlparser.VM, kube *kubernetes.Clientset) {
 		numDiff := diffMap[changingTypes]
 		switch {
 		case numDiff == 0:
+			log.Info("No change in %s\n", changingTypes)
 			//Do nothing
 		case numDiff > 0:
+			log.Notice("changing state of %s\n", changingTypes)
 			go ec.createNewVM(changingTypes, numDiff) //different type of VMs can be created in parallel
 		case numDiff < 0:
 			//delete machines
 			//		deleteMachines(t, numDiff)
+			log.Notice("changing state of %s\n", changingTypes)
 			go ec.deleteMachine(a, changingTypes, -numDiff, kube) //different type of VMs can be deleted in parallel
 		}
 	}
