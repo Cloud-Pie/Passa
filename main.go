@@ -117,7 +117,7 @@ func schedulerRoutine(stateChannel chan *ymlparser.State, cm cloudsolution.Cloud
 			durationUntilStateChange := incomingState.ISODate.Sub(time.Now())
 
 			deploymentTimer := time.AfterFunc(durationUntilStateChange, scale(*incomingState)) //Golang closures
-			incomingState.SetTimer(deploymentTimer)
+			incomingState.Timer = deploymentTimer
 			database.InsertState(*incomingState)
 		}
 	}
@@ -174,6 +174,7 @@ func periodicCheckRoutine() {
 			case true:
 				log.Info("State checked, everything is fine")
 			case false:
+				//NOTE: send SPDT notification
 				log.Warning("False State")
 
 			}

@@ -26,11 +26,12 @@ type VM struct {
 
 //State is the metadata of the state expected to scale to.
 type State struct {
+	ID       string
 	Services []Service
 	VMs      []VM
 	Name     string
 	ISODate  time.Time
-	timer    *time.Timer
+	Timer    *time.Timer
 }
 
 //Config provides data of the cloud infrastructure.
@@ -61,15 +62,6 @@ func ParseStatesfile(configFile string) *Config {
 	log.Debug("%s parse correctly", configFile)
 
 	return c
-}
-
-//SetTimer sets the private timer variable
-func (s *State) SetTimer(t *time.Timer) {
-	if s.timer != nil {
-		dur := s.ISODate.Sub(time.Now())
-		s.timer.Reset(dur)
-	}
-	s.timer = t
 }
 
 func (s State) getReadableTime() string {

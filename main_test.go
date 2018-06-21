@@ -26,9 +26,11 @@ func TestChannel(t *testing.T) {
 }
 
 func Test_minusDuration(t *testing.T) {
-	myDuration := time.Now().Local().Add(time.Hour * -2)
 
-	if time.Now().After(myDuration) {
-		fmt.Println("past time")
-	}
+	timer := time.AfterFunc(3*time.Second, func() {
+		fmt.Println("Running")
+	})
+
+	timer.Stop()
+	time.Sleep(4 * time.Second)
 }

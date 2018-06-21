@@ -28,15 +28,15 @@ func InitializeDB() {
 
 //InsertState inserts state to DB
 func InsertState(newState ymlparser.State) {
-	db.Write(dbName, newState.Name, newState)
+	db.Write(dbName, newState.ID, newState)
 }
 
 //GetSingleState returns single state
-func GetSingleState(stateName string) ymlparser.State {
+func GetSingleState(stateID string) ymlparser.State {
 
 	state := ymlparser.State{}
-	if err := db.Read(dbName, stateName, &state); err != nil {
-		log.Warning("Couldn't get %s", stateName)
+	if err := db.Read(dbName, stateID, &state); err != nil {
+		log.Warning("Couldn't get %s", stateID)
 		return ymlparser.State{}
 	}
 	return state
@@ -62,9 +62,12 @@ func ReadAllStates() []ymlparser.State {
 }
 
 //DeleteState deletes state with that name
-func DeleteState(deleteName string) error {
+func DeleteState(stateID string) error {
 	var err error
-	if err = db.Delete(dbName, deleteName); err != nil {
+
+	GetSingleState(stateID).Timer.Stop()
+
+	if err = db.Delete(dbName, stateID); err != nil {
 		fmt.Println("Error", err)
 
 	}
@@ -72,10 +75,9 @@ func DeleteState(deleteName string) error {
 }
 
 //UpdateState updates state
-func UpdateState(newState ymlparser.State, oldStateName string) error {
-	var err error
-	if err = db.Write(dbName, oldStateName, newState); err != nil {
-		fmt.Println("Error", err)
-	}
-	return err
+func UpdateState(newState ymlparser.State, oldStateID string) {
+
+	DeleteState(oldStateID)
+	InsertState(newState)
+
 }
