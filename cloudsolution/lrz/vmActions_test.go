@@ -13,71 +13,37 @@ func Test_econe_createNewKeypair(t *testing.T) {
 }
 
 func Test_VM_State(t *testing.T) {
-	want := []ymlparser.VM{
-		{
-			Type:  types[0],
-			Scale: 10,
-		},
-
-		{
-			Type:  types[2],
-			Scale: 2,
-		},
+	want := ymlparser.VM{
+		"m1.large": 10,
+		"m1.nano":  2,
 	}
 
-	current := []ymlparser.VM{
-		{
-			Type:  types[0],
-			Scale: 1,
-		},
-		{
-			Type:  types[1],
-			Scale: 2,
-		},
-		{
-			Type:  types[2],
-			Scale: 5,
-		},
+	current := ymlparser.VM{
+		"m1.large": 1,
+		"m1.small": 2,
+		"m1.nano":  5,
 	}
 
 	diff := vmCalc(want, current)
-	fmt.Printf("%v", diff)
-	e := econe{}
-	for _, t := range types {
-		numDiff := diff[t]
-		switch {
-		case numDiff == 0:
-			//do nothing
-		case numDiff > 0:
-			e.createNewVM(t, numDiff)
-		case numDiff < 0:
-			//delete machines
-			//		deleteMachines(t, numDiff)
-		}
+
+	for k, v := range diff {
+		fmt.Printf("%v -> %v\n", k, v)
+
 	}
+
 }
 
-func vmCalc(wantedVms []ymlparser.VM, currentVms []ymlparser.VM) map[string]int {
+func vmCalc(wantedMap ymlparser.VM, currentMap ymlparser.VM) ymlparser.VM {
 
-	wantedMap := make(map[string]int)
-	currentMap := make(map[string]int)
 	//wanted - current
-	for _, vm := range wantedVms {
-		wantedMap[vm.Type] = vm.Scale
-	}
-	fmt.Printf("%v", wantedMap)
-	for _, vm := range currentVms {
-		currentMap[vm.Type] = vm.Scale
-	}
-
-	fmt.Printf("%v", currentMap)
 
 	diffMap := make(map[string]int)
-	for _, t := range types {
-		diffMap[t] = wantedMap[t] - currentMap[t]
+	for k := range wantedMap {
+		if v, ok := currentMap[k]; ok {
+			diffMap[k] = wantedMap[k] - v
+		}
 	}
 
-	fmt.Printf("%v", diffMap)
 	return diffMap
 }
 

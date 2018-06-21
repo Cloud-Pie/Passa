@@ -3,7 +3,6 @@ package lrz
 import (
 	"fmt"
 	"io/ioutil"
-	"sort"
 	"strings"
 	"time"
 
@@ -101,8 +100,9 @@ func (l Lrz) ChangeState(wantedState ymlparser.State) cloudsolution.CloudManager
 					nodesInKube++
 				}
 			}
-			for _, v := range l.econe.getVMs() {
-				totalNumberofVMs += v.Scale
+			machines := l.econe.getVMs()
+			for machineType := range machines {
+				totalNumberofVMs += machines[machineType]
 			}
 
 			if nodesInKube != totalNumberofVMs {
@@ -122,9 +122,10 @@ func (l Lrz) ChangeState(wantedState ymlparser.State) cloudsolution.CloudManager
 		log.Debug("%s has no VM state, keeping current configuration", wantedState.Name)
 	}
 
-	for _, service := range wantedState.Services {
-		l.scaleContainers(service.Name, service.Scale)
+	for key := range wantedState.Services {
+		l.scaleContainers(key, wantedState.Services[key])
 	}
+
 	l.lastDeployedState = wantedState
 	return l
 }
@@ -161,21 +162,16 @@ func (l Lrz) CheckState() bool {
 	return false
 }
 
-func (l Lrz) getServiceCount() []ymlparser.Service {
+func (l Lrz) getServiceCount() ymlparser.Service {
 
 	deploymentList, _ := l.kube.AppsV1().Deployments(apiv1.NamespaceDefault).List(metav1.ListOptions{})
 
-	currentServices := []ymlparser.Service{}
+	currentServices := ymlparser.Service{}
 
 	for _, d := range deploymentList.Items {
-		currentServices = append(currentServices, ymlparser.Service{
-			Name:  d.Name,
-			Scale: int(*d.Spec.Replicas),
-		})
+		currentServices[d.Name] = int(*d.Spec.Replicas)
+
 	}
-	sort.Slice(currentServices, func(i, j int) bool {
-		return currentServices[i].Name > currentServices[j].Name
-	})
 
 	return currentServices
 }
@@ -189,7 +185,8 @@ func (l Lrz) scaleContainers(serviceName string, scaleNum int) string {
 		// RetryOnConflict uses exponential backoff to avoid exhausting the apiserver
 		result, getErr := deploymentsClient.Get(serviceName, metav1.GetOptions{})
 		if getErr != nil {
-			panic(fmt.Errorf("Failed to get latest version of Deployment: %v", getErr))
+			log.Critical("Failed to get latest version of Deployment %v", getErr)
+
 		}
 
 		sn := int32(scaleNum)
@@ -199,25 +196,16 @@ func (l Lrz) scaleContainers(serviceName string, scaleNum int) string {
 		return updateErr
 	})
 	if retryErr != nil {
-		panic(fmt.Errorf("Update failed: %v", retryErr))
+
+		log.Critical("Update Failed %v", retryErr)
+
 	}
 	log.Notice("Updated deployment...")
 
 	return ""
 }
 
-func areVMsCorrect(deployed []ymlparser.VM, real []ymlparser.VM) bool {
-
-	deployedVMMap := map[string]int{}
-	realVMMap := map[string]int{}
-
-	for _, vm := range deployed {
-		deployedVMMap[vm.Type] = vm.Scale
-	}
-
-	for _, vm := range real {
-		realVMMap[vm.Type] = vm.Scale
-	}
+func areVMsCorrect(deployedVMMap ymlparser.VM, realVMMap ymlparser.VM) bool {
 
 	for key := range deployedVMMap {
 		if deployedVMMap[key] != realVMMap[key] {
@@ -227,18 +215,7 @@ func areVMsCorrect(deployed []ymlparser.VM, real []ymlparser.VM) bool {
 	return true
 }
 
-func areServicesCorrect(deployed []ymlparser.Service, real []ymlparser.Service) bool {
-	deployedServicesMap := map[string]int{}
-
-	realServicesMap := map[string]int{}
-
-	for _, service := range deployed {
-		deployedServicesMap[service.Name] = service.Scale
-	}
-
-	for _, service := range real {
-		realServicesMap[service.Name] = service.Scale
-	}
+func areServicesCorrect(deployedServicesMap ymlparser.Service, realServicesMap ymlparser.Service) bool {
 
 	for key := range deployedServicesMap {
 		if deployedServicesMap[key] != realServicesMap[key] {

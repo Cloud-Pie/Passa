@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/exec"
 	"reflect"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -233,7 +232,7 @@ func (ds DockerSwarm) ChangeState(wantedState ymlparser.State) cloudsolution.Clo
 
 		totalVM := 0
 		for idx := range wantedState.VMs {
-			totalVM += wantedState.VMs[idx].Scale
+			totalVM += wantedState.VMs[idx]
 		}
 		//Scale machines
 		currentState := listMachines()
@@ -278,10 +277,11 @@ func (ds DockerSwarm) ChangeState(wantedState ymlparser.State) cloudsolution.Clo
 	} else {
 		log.Debug("%s has no VM state, keeping current...", wantedState.Name)
 	}
-	for _, service := range wantedState.Services {
-		fmt.Println("scaling")
-		ds.scaleContainers(service.Name, service.Scale)
+	for key := range wantedState.Services {
+		ds.scaleContainers(key, wantedState.Services[key])
+
 	}
+
 	ds.lastDeployedState = ds.GetActiveState()
 	ds.isActivelyDeploying = false
 	return ds
@@ -296,7 +296,7 @@ func (ds DockerSwarm) GetActiveState() ymlparser.State {
 	}
 }
 
-func (ds DockerSwarm) getServiceCount() []ymlparser.Service {
+func (ds DockerSwarm) getServiceCount() ymlparser.Service {
 	//return []ymlparser.Service{}
 
 	session := getSSHSession(ds.managerIP, ds.managerMachineName)
@@ -310,20 +310,14 @@ func (ds DockerSwarm) getServiceCount() []ymlparser.Service {
 
 	servicesList := strings.Split(strings.Trim(string(b.String()[:]), "\n"), "\n")
 
-	currentServices := []ymlparser.Service{}
+	currentServices := ymlparser.Service{}
 	for _, serviceString := range servicesList {
 		serviceSplit := strings.Split(serviceString, " ")
 
 		serviceCount, _ := strconv.Atoi(strings.Split(serviceSplit[1], "/")[0])
-		currentServices = append(currentServices, ymlparser.Service{
-			Name:  serviceSplit[0],
-			Scale: serviceCount,
-		})
-	}
+		currentServices[serviceSplit[0]] = serviceCount
 
-	sort.Slice(currentServices, func(i, j int) bool {
-		return currentServices[i].Name > currentServices[j].Name
-	})
+	}
 
 	return currentServices
 }
@@ -339,14 +333,6 @@ func (ds DockerSwarm) CheckState() bool {
 	weDeployed := ds.GetLastDeployedState()
 	real := ds.GetActiveState() //SORT
 
-	sort.Slice(weDeployed.Services, func(i, j int) bool {
-		return weDeployed.Services[i].Name > weDeployed.Services[j].Name
-	})
-
-	sort.Slice(real.Services, func(i, j int) bool {
-		return real.Services[i].Name > real.Services[j].Name
-	})
-
 	real.ISODate = weDeployed.ISODate //server return zero ISODate and is equal check fails otherwise
 	if reflect.DeepEqual(weDeployed, real) {
 		log.Info("State holds")
@@ -357,9 +343,10 @@ func (ds DockerSwarm) CheckState() bool {
 	return false
 }
 
-func (ds DockerSwarm) getMachines() []ymlparser.VM {
-	return []ymlparser.VM{{
-		Type:  machinePrefix,
-		Scale: len(listMachines()),
-	}}
+func (ds DockerSwarm) getMachines() ymlparser.VM {
+
+	return ymlparser.VM{
+		machinePrefix: len(listMachines()),
+	}
+
 }

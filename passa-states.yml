@@ -10,28 +10,22 @@ provider:
   joinCommand: kubeadm join 10.155.209.32:6443 --token iok3y5.tl19pxm0ga2ptmxl --discovery-token-ca-cert-hash sha256:66675a910a53e6abd050b2bc2a4dde1f374450460d62921a7d58a2eaa1993e4b
 
 states:
-- time: 11-05-2018, 00:14:47 CEST
+- isodate: 2018-04-22T12:54:16.722357636+02:00
   name: state-with-6
   services:
-  - name: relax_web
-    scale: 5
+    relax_web: 5  
   vms:
-  - type: m1.small
-    scale: 2
-  - type: nano
-    scale: 1
+    m1.small: 2
+    m1.nano: 1
+    
 
-
-- time: 11-05-2018, 00:19:47 CEST
+- isodate: 2018-04-22T12:54:16.722357636+02:00
   name: state-with-2
   services:
-  - name: relax_web
-    scale: 1
+    relax_web: 2
   vms:
-  - type: small
-    scale : 2
-  - type: nano
-    scale : 3
-
+    m1.small: 3
+    m1.nano: 4
+  
 
 
