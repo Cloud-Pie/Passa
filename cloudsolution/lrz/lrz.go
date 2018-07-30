@@ -169,14 +169,13 @@ func (l Lrz) getServiceCount() ymlparser.Service {
 	currentServices := ymlparser.Service{}
 
 	for _, d := range deploymentList.Items {
-		currentServices[d.Name] = int(*d.Spec.Replicas)
-
+		currentServices[d.Name] = ymlparser.ServiceInfo{Replicas: int(*d.Spec.Replicas), CPU: d.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().Value(), Memory: d.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().Value()}
 	}
 
 	return currentServices
 }
 
-func (l Lrz) scaleContainers(serviceName string, scaleNum int) string {
+func (l Lrz) scaleContainers(serviceName string, serviceInfo ymlparser.ServiceInfo) string {
 
 	log.Info("Updating Services...")
 	deploymentsClient := l.kube.AppsV1().Deployments(apiv1.NamespaceDefault)
@@ -189,8 +188,11 @@ func (l Lrz) scaleContainers(serviceName string, scaleNum int) string {
 
 		}
 
-		sn := int32(scaleNum)
-		result.Spec.Replicas = &sn // reduce replica count
+		sn := int32(serviceInfo.Replicas)
+		result.Spec.Replicas = &sn
+		//result.Spec.Template.Spec.Containers[0].Args = []string{"-cpus", serviceInfo.CPU}
+		result.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().Set(serviceInfo.Memory)
+		result.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().Set(serviceInfo.CPU)
 
 		_, updateErr := deploymentsClient.Update(result)
 		return updateErr

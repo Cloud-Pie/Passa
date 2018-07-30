@@ -12,8 +12,15 @@ import (
 
 var log = logging.MustGetLogger("passa")
 
-//Service keeps the name and scale of the scaled service.
-type Service map[string]int
+//Service keeps cpu and memory for one service
+type Service map[string]ServiceInfo
+
+//ServiceInfo is constraints for kubernetes
+type ServiceInfo struct {
+	CPU      int64
+	Memory   int64
+	Replicas int
+}
 
 //VM keeps the type and scale of virtual machines.
 type VM map[string]int
@@ -25,7 +32,7 @@ type State struct {
 	VMs      VM
 	Name     string
 	ISODate  time.Time
-	Timer    *time.Timer
+	timer    *time.Timer
 }
 
 //Config provides data of the cloud infrastructure.
@@ -60,4 +67,14 @@ func ParseStatesfile(configFile string) *Config {
 
 func (s State) getReadableTime() string {
 	return time.Now().Format(time.RFC822)
+}
+
+//SetTimer sets the timer of the state
+func (s *State) SetTimer(t *time.Timer) {
+	s.timer = t
+}
+
+//StopTimer stops the timer of the state
+func (s *State) StopTimer() {
+	s.timer.Stop()
 }

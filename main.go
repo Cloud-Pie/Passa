@@ -115,9 +115,10 @@ func schedulerRoutine(stateChannel chan *ymlparser.State, cm cloudsolution.Cloud
 			database.InsertState(*incomingState)
 		} else {
 			durationUntilStateChange := incomingState.ISODate.Sub(time.Now())
-
+			log.Info("%v queued for deployment", incomingState.Name)
 			deploymentTimer := time.AfterFunc(durationUntilStateChange, scale(*incomingState)) //Golang closures
-			incomingState.Timer = deploymentTimer
+			incomingState.SetTimer(deploymentTimer)
+
 			database.InsertState(*incomingState)
 		}
 	}

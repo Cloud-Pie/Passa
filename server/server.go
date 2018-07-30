@@ -1,8 +1,6 @@
 package server
 
 import (
-	"crypto/md5"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -63,7 +61,7 @@ func createState(c *gin.Context) {
 			"error": "Time or service field is empty",
 		})
 	} else {
-		newState.ID = hash(newState)
+
 		stateChannel <- &newState
 		c.JSON(200, gin.H{
 			"data": "success",
@@ -123,11 +121,4 @@ func invalidateFutureStates(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"invalidatedStates": invalidatedStateNum,
 	})
-}
-
-func hash(item ymlparser.State) string {
-
-	jsonBytes, _ := json.Marshal(item)
-
-	return fmt.Sprintf("%x", md5.Sum(jsonBytes))
 }

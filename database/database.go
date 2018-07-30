@@ -1,6 +1,7 @@
 package database
 
 import (
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
 
@@ -28,18 +29,24 @@ func InitializeDB() {
 
 //InsertState inserts state to DB
 func InsertState(newState ymlparser.State) {
-	db.Write(dbName, newState.ID, newState)
+
+	if newState.ID == "" {
+		newState.ID = hash(newState)
+	}
+	if err := db.Write(dbName, newState.ID, newState); err != nil {
+		panic(err)
+	}
 }
 
 //GetSingleState returns single state
-func GetSingleState(stateID string) ymlparser.State {
+func GetSingleState(stateID string) *ymlparser.State {
 
 	state := ymlparser.State{}
 	if err := db.Read(dbName, stateID, &state); err != nil {
 		log.Warning("Couldn't get %s", stateID)
-		return ymlparser.State{}
+		return nil
 	}
-	return state
+	return &state
 
 }
 
@@ -65,7 +72,7 @@ func ReadAllStates() []ymlparser.State {
 func DeleteState(stateID string) error {
 	var err error
 
-	GetSingleState(stateID).Timer.Stop()
+	GetSingleState(stateID).StopTimer()
 
 	if err = db.Delete(dbName, stateID); err != nil {
 		fmt.Println("Error", err)
@@ -80,4 +87,11 @@ func UpdateState(newState ymlparser.State, oldStateID string) {
 	DeleteState(oldStateID)
 	InsertState(newState)
 
+}
+
+func hash(item ymlparser.State) string {
+
+	jsonBytes, _ := json.Marshal(item)
+
+	return fmt.Sprintf("%x", md5.Sum(jsonBytes))
 }

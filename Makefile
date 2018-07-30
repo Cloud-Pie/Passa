@@ -34,6 +34,7 @@ clean:
 	$(GOCLEAN) -testcache
 	- rm .db.json
 	- rm  build/*
+	- rm -r .db
 	
 
 server:

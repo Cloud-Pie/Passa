@@ -278,7 +278,7 @@ func (ds DockerSwarm) ChangeState(wantedState ymlparser.State) cloudsolution.Clo
 		log.Debug("%s has no VM state, keeping current...", wantedState.Name)
 	}
 	for key := range wantedState.Services {
-		ds.scaleContainers(key, wantedState.Services[key])
+		ds.scaleContainers(key, wantedState.Services[key].Replicas)
 
 	}
 
@@ -315,7 +315,8 @@ func (ds DockerSwarm) getServiceCount() ymlparser.Service {
 		serviceSplit := strings.Split(serviceString, " ")
 
 		serviceCount, _ := strconv.Atoi(strings.Split(serviceSplit[1], "/")[0])
-		currentServices[serviceSplit[0]] = serviceCount
+
+		currentServices[serviceSplit[0]] = ymlparser.ServiceInfo{Replicas: serviceCount}
 
 	}
 

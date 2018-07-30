@@ -23,8 +23,8 @@ func Test_lrz_scaleContainers(t *testing.T) {
 	fmt.Printf("%+v", state)
 
 	wantedState := ymlparser.State{Services: ymlparser.Service{
-		"hello_world": 4,
-		"nginx":       3,
+		"hello_world": ymlparser.ServiceInfo{Replicas: 4},
+		"nginx":       ymlparser.ServiceInfo{Replicas: 3},
 	}}
 
 	tester.ChangeState(wantedState)
