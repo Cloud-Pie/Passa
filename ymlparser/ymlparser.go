@@ -27,12 +27,13 @@ type VM map[string]int
 
 //State is the metadata of the state expected to scale to.
 type State struct {
-	ID       string
-	Services Service
-	VMs      VM
-	Name     string
-	ISODate  time.Time
-	timer    *time.Timer
+	Services     Service
+	VMs          VM
+	Name         string
+	ISODate      time.Time
+	timer        *time.Timer
+	ExpectedTime time.Time
+	RealTime     time.Time
 }
 
 //Config provides data of the cloud infrastructure.
@@ -76,5 +77,7 @@ func (s *State) SetTimer(t *time.Timer) {
 
 //StopTimer stops the timer of the state
 func (s *State) StopTimer() {
-	s.timer.Stop()
+	if s.timer != nil {
+		s.timer.Stop()
+	}
 }

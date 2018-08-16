@@ -1,4 +1,4 @@
-package lrz
+package aws
 
 import (
 	"fmt"
@@ -17,8 +17,8 @@ import (
 	"k8s.io/client-go/util/retry"
 )
 
-const scriptFilename = "lrzscript.sh"
-const bashCommand = "#!/usr/bin/env bash"
+const scriptFilename = "awsscript.sh"
+const bashCommand = "#!/bin/bash"
 const deploymentTimeout = 120 * time.Second
 
 var log = logging.MustGetLogger("passa")
@@ -30,8 +30,8 @@ type Lrz struct {
 	kube              *kubernetes.Clientset
 }
 
-//NewLRZManager return a new manager for lrz.
-func NewLRZManager(username, password, configFile string, joinCommand string) Lrz {
+//NewAWSManager return a new manager for lrz.
+func NewAWSManager(username, password, configFile string, joinCommand string) Lrz {
 
 	config, err := clientcmd.BuildConfigFromFlags("", configFile)
 	if err != nil {

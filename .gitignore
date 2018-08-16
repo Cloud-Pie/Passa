@@ -12,3 +12,4 @@ test/mycube.txt
 *.conf
 *.private
 .db
+*.pem

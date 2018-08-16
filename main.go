@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/Cloud-Pie/Passa/cloudsolution/aws"
 	"github.com/Cloud-Pie/Passa/cloudsolution/dockerswarm"
 	"github.com/Cloud-Pie/Passa/cloudsolution/lrz"
 	"github.com/Cloud-Pie/Passa/database"
@@ -72,6 +73,8 @@ func main() {
 			cloudManager = dockerswarm.NewSwarmManager(c.Provider.ManagerIP)
 		} else if c.Provider.Name == "lrz" {
 			cloudManager = lrz.NewLRZManager(c.Provider.Username, c.Provider.Password, c.Provider.ConfigFile, c.Provider.JoinCommand)
+		} else if c.Provider.Name == "aws" {
+			cloudManager = aws.NewAWSManager(c.Provider.Username, c.Provider.Password, c.Provider.ConfigFile, c.Provider.JoinCommand)
 		}
 	}
 
@@ -134,9 +137,15 @@ func scale(s ymlparser.State) func() {
 			log.Info("%#v", cloudManager.GetLastDeployedState())
 			isCurrentlyDeploying = false
 
+			notifier.Notify("Deployed " + s.Name)
+			s.RealTime = time.Now()
+			if s.RealTime.After(s.ExpectedTime) {
+				log.Warning("Deployed later")
+			} else {
+				log.Info("Deployed early")
+			}
+			database.UpdateState(s, s.Name)
 		}
-		notifier.Notify("Deployed " + s.Name)
-
 	}
 }
 
@@ -193,4 +202,8 @@ func styleEntry() {
 	|  |     /  _____  \  .----)   |   .----)   |    /  _____  \ 
 	| _|    /__/     \__\ |_______/    |_______/    /__/     \__\
 	`)
+}
+
+func checkForExternalTool(toolname string) {
+	//TODO: check whether awscli or euca2ools exists in path
 }

@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/Cloud-Pie/Passa/database"
@@ -9,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var config *ymlparser.Config
 var stateChannel chan *ymlparser.State
 
 //SetupServer setups the web interface server
@@ -17,7 +17,7 @@ func SetupServer(sc chan *ymlparser.State) *gin.Engine {
 	r := gin.Default()
 	stateChannel = sc //left: global, right: func param
 
-	//r.LoadHTMLGlob(os.Getenv("GOPATH") + "/src/github.com/Cloud-Pie/Passa/server/templates/*") //FIXME: still needs a fix
+	r.LoadHTMLGlob(os.Getenv("GOPATH") + "/src/github.com/Cloud-Pie/Passa/server/templates/*") //FIXME: still needs a fix
 
 	r.GET("/", func(ctx *gin.Context) {
 
@@ -26,10 +26,11 @@ func SetupServer(sc chan *ymlparser.State) *gin.Engine {
 
 	r.GET("/ui/timeline", func(ctx *gin.Context) {
 
-		//ctx.HTML(200, "timeline.html", config)
-		ctx.JSON(200, gin.H{
+		ctx.HTML(200, "timeline.html", database.ReadAllStates())
+		/*ctx.JSON(200, gin.H{
 			"timeline": "Not working will be fixed in v1.1",
 		})
+		*/
 	})
 
 	statesRest := r.Group("/api/states")
@@ -42,7 +43,7 @@ func SetupServer(sc chan *ymlparser.State) *gin.Engine {
 
 	}
 
-	r.GET("/api/invalidate/:timestamp", invalidateFutureStates)
+	r.GET("/api/invalidate/:timestamp", invalidateFutureStates) //FIXME: yesika wants this to be
 	r.POST("/test", func(c *gin.Context) {
 		var myState ymlparser.State
 		c.BindJSON(&myState)
@@ -113,7 +114,7 @@ func invalidateFutureStates(c *gin.Context) {
 	var invalidatedStateNum = 0
 	for _, s := range database.ReadAllStates() {
 		if s.ISODate.After(invalidateTime) {
-			database.DeleteState(s.ID)
+			database.DeleteState(s.Name)
 			invalidatedStateNum++
 		}
 	}

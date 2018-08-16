@@ -67,7 +67,10 @@
     timeline.focus(selection);
   };
   
-{{range .States}}
+  console.log("deneme");
+  //console.log({{.}});
+
+{{range .}}
     
     new_item={
         start:{{.ISODate}},
@@ -95,19 +98,22 @@ timeline.on('select', function (properties) {
 <th>Name</th>
 <th>Scale</th>
 </tr>`
-  selectedState.services.forEach(element => {
+
+Object.keys(selectedState.services)
+  .forEach(function eachKey(key) { 
+    console.log(key); // alerts key 
+    console.log(selectedState.services[key]); // alerts value
     
+    var row=myList.insertRow(1);
+    var cell1 = row.insertCell(0);
+    var cell2 = row.insertCell(1);
 
-  var row = myList.insertRow(1);
-
-// Insert new cells (<td> elements) at the 1st and 2nd position of the "new" <tr> element:
-var cell1 = row.insertCell(0);
-var cell2 = row.insertCell(1);
-
-// Add some text to the new cells:
-cell1.innerHTML = element.Name;
-cell2.innerHTML = element.Scale;
+    cell1.innerHTML = key;
+    cell2.innerHTML = selectedState.services[key].Replicas;
+  
+  
   });
+  
 
 });
 

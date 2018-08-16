@@ -9,9 +9,17 @@ provider:
   configFile: /Users/atakanyenel/Desktop/Computer_Science/go/src/github.com/Cloud-Pie/Passa/test/admin.conf
   joinCommand: kubeadm join 10.155.209.32:6443 --token iok3y5.tl19pxm0ga2ptmxl --discovery-token-ca-cert-hash sha256:66675a910a53e6abd050b2bc2a4dde1f374450460d62921a7d58a2eaa1993e4b
 
+provider:
+  name: aws
+  username: ${AWS_USERNAME}
+  password: ${AWS_PASSWORD}
+  configFile: /Users/atakanyenel/Desktop/Computer_Science/go/src/github.com/Cloud-Pie/Passa/test/admin.conf
+  joinCommand: kubeadm join 10.155.209.32:6443 --token iok3y5.tl19pxm0ga2ptmxl --discovery-token-ca-cert-hash sha256:66675a910a53e6abd050b2bc2a4dde1f374450460d62921a7d58a2eaa1993e4b
+
 states:
-- isodate: 2018-04-22T12:54:16.722357636+02:00
-  name: state-with-6
+- isodate: 2018-08-14T12:54:16.722357636+02:00
+  expectedtime: 2018-08-14T12:54:16.722357636+02:00
+  name: state-5
   services:
     relax_web:
         cpu: 100
@@ -22,10 +30,10 @@ states:
     m1.nano: 1
     
 
-- isodate: 2018-04-22T12:54:16.722357636+02:00
-  name: state-with-2
-  services:
-    relax_web:
+- isodate: 2018-08-29T12:54:16.722357636+02:00
+  expectedtime: 2018-04-18T12:54:16.722357636+02:00
+  name: state-4
+  relax_web:
       cpu: 300
       memory: 400
       replicas: 2
@@ -34,4 +42,41 @@ states:
     m1.nano: 4
   
 
+- isodate: 2018-10-21T12:54:16.722357636+02:00
+  expectedtime: 2018-10-21T12:54:16.722357636+02:00
+  name: state-2
+  services:
+    relax_web:
+      cpu: 300
+      memory: 400
+      replicas: 2
+  vms:
+    m1.small: 3
+    m1.nano: 4
+
+
+- isodate: 2018-09-09T12:54:16.722357636+02:00
+  expectedtime: 2018-04-18T12:54:16.722357636+02:00
+  name: state-1
+  services:
+    relax_web:
+      cpu: 300
+      memory: 400
+      replicas: 2
+  vms:
+    m1.small: 3
+    m1.nano: 4
+
+
+- isodate: 2018-07-20T12:54:16.722357636+02:00
+  expectedtime: 2018-04-18T12:54:16.722357636+02:00
+  name: state-3
+  services:
+    relax_web:
+      cpu: 300
+      memory: 400
+      replicas: 2
+  vms:
+    m1.small: 3
+    m1.nano: 4
 

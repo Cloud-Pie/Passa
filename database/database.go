@@ -30,10 +30,7 @@ func InitializeDB() {
 //InsertState inserts state to DB
 func InsertState(newState ymlparser.State) {
 
-	if newState.ID == "" {
-		newState.ID = hash(newState)
-	}
-	if err := db.Write(dbName, newState.ID, newState); err != nil {
+	if err := db.Write(dbName, newState.Name, newState); err != nil {
 		panic(err)
 	}
 }

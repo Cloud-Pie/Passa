@@ -32,9 +32,6 @@ func main() {
 	}
 	fmt.Printf("%+v\n\n", c)
 
-	c.Provider.Username = os.Getenv("LRZ_USERNAME")
-	c.Provider.Password = os.Getenv("LRZ_PASSWORD")
-
 	fmt.Printf("%v", c)
 	ymlByte, err := yaml.Marshal(&c)
 	check(err)
