@@ -90,6 +90,15 @@ func main() {
 	}
 	//Code For Cloud Management End
 
+	//read previous states from db
+	for idx := range database.ReadAllStates() {
+
+		if !c.States[idx].ISODate.IsZero() {
+			stateChannel <- &c.States[idx]
+		} else {
+			log.Warning("Invalid time for: %s", c.States[idx].Name)
+		}
+	}
 	//Code for WatchDog Start
 	if !flagVars.noCloud {
 		go periodicCheckRoutine()
@@ -113,7 +122,7 @@ func main() {
 //Most important function in the whole project !!
 func schedulerRoutine(stateChannel chan *ymlparser.State, cm cloudsolution.CloudManagerInterface) {
 	for incomingState := range stateChannel {
-		if time.Now().After(incomingState.ISODate) && false { //FIXME: remove && false
+		if time.Now().After(incomingState.ISODate) { //FIXME: remove && false
 			log.Notice("%s is a past state, not deploying\n", incomingState.Name)
 			database.InsertState(*incomingState)
 		} else {
@@ -138,13 +147,15 @@ func scale(s ymlparser.State) func() {
 			isCurrentlyDeploying = false
 
 			notifier.Notify("Deployed " + s.Name)
+			database.UpdateState(s, s.Name)
+
 			s.RealTime = time.Now()
 			if s.RealTime.After(s.ExpectedTime) {
 				log.Warning("Deployed later")
 			} else {
 				log.Info("Deployed early")
 			}
-			database.UpdateState(s, s.Name)
+
 		}
 	}
 }

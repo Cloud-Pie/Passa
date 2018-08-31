@@ -7,6 +7,7 @@ GOGENERATE=$(GOCMD) generate
 BINARY_NAME=passa
 BUILD_DIR=build
 BINARY_UNIX=$(BINARY_NAME)_unix
+BINARY_WINDOWS=$(BINARY_NAME)_win
 
 .PHONY: all test clean server
 
@@ -43,8 +44,10 @@ server:
 	./Passa --no-cloud
 
 dist:
-	env GOOS=linux GOARCH=amd64 go build -o build/passa_linux
 	go build -o build/passa_mac
+	env GOOS=linux GOARCH=amd64 go build -o build/passa_linux
+	env GOOS=windows GOARCH=386 go build -o build/pass_win
+	
 
 linux:
 	env GOOS=linux GOARCH=amd64 go build -o build/passa_linux

@@ -61,7 +61,7 @@ func ParseStatesfile(configFile string) *Config {
 		panic(err)
 
 	}
-	log.Debug("%s parse correctly", configFile)
+	log.Debug("%s parsed correctly", configFile)
 
 	return c
 }
