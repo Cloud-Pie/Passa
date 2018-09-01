@@ -1,6 +1,7 @@
 # PASSA
 Predictive Auto Scaling Scheduler Application
 
+![Passa in Action](./passa_pic.png)
 ## To Run:
 `go generate`  
 `go build`  
