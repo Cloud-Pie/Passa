@@ -43,7 +43,7 @@ func SetupServer(sc chan *ymlparser.State) *gin.Engine {
 
 	}
 
-	r.GET("/api/invalidate/:timestamp", invalidateFutureStates) //FIXME: yesika wants this to be
+	r.GET("/api/invalidate/:timestamp", invalidateFutureStates) //FIXME: yesika wants this to be POST
 	r.POST("/test", func(c *gin.Context) {
 		var myState ymlparser.State
 		c.BindJSON(&myState)

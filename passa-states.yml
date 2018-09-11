@@ -16,6 +16,9 @@ provider:
   configFile: /Users/atakanyenel/Desktop/Computer_Science/go/src/github.com/Cloud-Pie/Passa/test/admin.conf
   joinCommand: kubeadm join 10.155.209.32:6443 --token iok3y5.tl19pxm0ga2ptmxl --discovery-token-ca-cert-hash sha256:66675a910a53e6abd050b2bc2a4dde1f374450460d62921a7d58a2eaa1993e4b
 
+provider:
+  name: gce
+  clusterName: testing
 states:
 - isodate: 2018-08-14T12:54:16.722357636+02:00
   expectedtime: 2018-08-14T12:54:16.722357636+02:00
@@ -28,7 +31,7 @@ states:
   vms:
     m1.small: 2
     m1.nano: 1
-    
+
 
 - isodate: 2018-08-29T12:54:16.722357636+02:00
   expectedtime: 2018-04-18T12:54:16.722357636+02:00
@@ -40,7 +43,7 @@ states:
   vms:
     m1.small: 3
     m1.nano: 4
-  
+
 
 - isodate: 2018-10-21T12:54:16.722357636+02:00
   expectedtime: 2018-10-21T12:54:16.722357636+02:00
@@ -79,4 +82,3 @@ states:
   vms:
     m1.small: 3
     m1.nano: 4
-
