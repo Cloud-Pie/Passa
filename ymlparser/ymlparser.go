@@ -46,7 +46,7 @@ type Config struct {
 		Password    string
 		ConfigFile  string `yaml:"configFile"`
 		JoinCommand string `yaml:"joinCommand"`
-		ClusterName string
+		ClusterName string `yaml:"clusterName"`
 	} `yaml:"provider"`
 }
 

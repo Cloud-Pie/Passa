@@ -94,14 +94,7 @@ func main() {
 	//Code For Cloud Management End
 
 	//read previous states from db
-	for idx := range database.ReadAllStates() {
 
-		if !c.States[idx].ISODate.IsZero() {
-			stateChannel <- &c.States[idx]
-		} else {
-			log.Warning("Invalid time for: %s", c.States[idx].Name)
-		}
-	}
 	//Code for WatchDog Start
 	if !flagVars.noCloud {
 		go periodicCheckRoutine()
@@ -153,12 +146,13 @@ func scale(s ymlparser.State) func() {
 			database.UpdateState(s, s.Name)
 
 			s.RealTime = time.Now()
-			if s.RealTime.After(s.ExpectedTime) {
-				log.Warning("Deployed later")
-			} else {
-				log.Info("Deployed early")
+			if !s.ExpectedTime.IsZero() {
+				if s.RealTime.After(s.ExpectedTime) {
+					log.Warning("Deployed later")
+				} else {
+					log.Info("Deployed early")
+				}
 			}
-
 		}
 	}
 }

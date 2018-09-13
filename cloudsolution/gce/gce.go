@@ -3,6 +3,8 @@ package gce
 import (
 	"fmt"
 	"os/exec"
+	"strconv"
+	"strings"
 
 	"github.com/Cloud-Pie/Passa/cloudsolution"
 	"github.com/Cloud-Pie/Passa/ymlparser"
@@ -10,7 +12,9 @@ import (
 )
 
 //gcloud container clusters resize [CLUSTER_NAME] --node-pool [POOL_NAME] --size [SIZE]
-const resizeClusterCommand = "gcloud container clusters resize %s --node-pool %s --size %d"
+const resizeClusterCommand = "gcloud container clusters  resize %s --node-pool %s --size %d -q"
+
+var types = []string{"t2.micro", "t2.large"}
 
 /*
 * NOTE: gcloud info --format=json --filter="config.core"
@@ -21,7 +25,7 @@ const scaleContainersCommand = "kubectl scale deployment %s --replicas %d"
 
 const getNodesCommand = "kubectl get nodes"
 
-const getDeploymentsCommand = "kubectl get deployments"
+const getDeploymentsCommand = "kubectl get deployments" //TODO: use minikube to test this
 
 const getAccount = "gcloud info --format='value(config.account)'"
 
@@ -35,11 +39,11 @@ type GCE struct {
 
 //NewGCEManager return a new manager for GCE.
 func NewGCEManager(cn string) GCE {
-	if isCommandAvailable("gcloud") {
-		log.Info("gcloud is active")
+	if isCommandAvailable("gcloud") && isCommandAvailable("kubectl") {
+		log.Info("Commands found: gcloud, kubectl")
 	} else {
 
-		log.Critical("gcloud command not found, exiting...")
+		log.Critical("gcloud or kubectl not found")
 
 	}
 	accountName, _ := exec.Command("sh", "-c", getAccount).Output()
@@ -48,7 +52,7 @@ func NewGCEManager(cn string) GCE {
 	cs := GCE{
 		clusterName: cn,
 	}
-	cs.lastDeployedState = cs.GetLastDeployedState()
+	cs.lastDeployedState = cs.GetActiveState()
 	log.Info("GCE manager created")
 	return cs
 }
@@ -63,7 +67,10 @@ func (g GCE) ChangeState(wantedState ymlparser.State) cloudsolution.CloudManager
 	if wantedState.VMs != nil {
 		g.scaleVms(wantedState.VMs)
 	}
-	return GCE{}
+	g.scaleContainers(wantedState.Services)
+
+	g.lastDeployedState = wantedState
+	return g
 }
 
 //GetActiveState gets current state.
@@ -89,29 +96,57 @@ func (g GCE) CheckState() bool {
 
 func (g GCE) scaleVms(wantedVMs ymlparser.VM) { //TODO:
 	for t, s := range wantedVMs {
+		t = strings.Replace(t, ".", "-", -1) // For AWS compatibility
 		log.Info("Sending RESIZE command for %s:%d", t, s)
-		exec.Command(fmt.Sprintf(resizeClusterCommand, g.clusterName, t, s))
+		cmd := fmt.Sprintf(resizeClusterCommand, g.clusterName, t, s)
+		fmt.Println(cmd)
+		exec.Command("sh", "-c", cmd).Output()
 	}
 }
 
 func (g GCE) scaleContainers(wantedContainers ymlparser.Service) {
-	for name, replicaCount := range wantedContainers {
-		log.Info("Sending SCALE command for %s:%d", name, replicaCount)
-		exec.Command(fmt.Sprint(scaleContainersCommand, name, replicaCount)) //TODO: modify command for memory & cpu
+
+	for name, serviceInfo := range wantedContainers {
+		log.Info("Sending SCALE command for %s:%d", name, serviceInfo.Replicas)
+		cmd := fmt.Sprintf(scaleContainersCommand, name, serviceInfo.Replicas)
+		fmt.Println(cmd)
+		exec.Command("sh", "-c", cmd).Output() //TODO: modify command for memory & cpu
 	}
 }
 
 func (g GCE) getVMs() ymlparser.VM {
-	out, _ := exec.Command(getDeploymentsCommand).Output()
-	//TODO: parse out
-	log.Info(string(out))
-	return ymlparser.VM{}
+	vms := ymlparser.VM{}
+	out, _ := exec.Command("sh", "-c", getNodesCommand).Output()
+
+	for _, t := range types {
+		searchString := strings.Replace(t, ".", "-", -1)
+		vms[t] = strings.Count(string(out), searchString)
+
+	}
+	fmt.Println(vms)
+	return vms
+
 }
+
 func (g GCE) getServices() ymlparser.Service {
-	out, _ := exec.Command(getNodesCommand).Output()
-	//TODO: parse output
-	log.Info(string(out))
-	return ymlparser.Service{}
+	serviceMap := ymlparser.Service{}
+	services, _ := exec.Command("sh", "-c", "kubectl get deployments").Output()
+
+	a := strings.Split(string(services[:]), "\n")
+
+	for _, line := range a[1 : len(a)-1] {
+		serviceName := strings.Fields(line)[0]
+		replicaCount := strings.Fields(line)[4]
+
+		replicaCountInt, err := strconv.Atoi(replicaCount)
+		if err != nil {
+			panic(err)
+		}
+		serviceMap[serviceName] = ymlparser.ServiceInfo{Replicas: replicaCountInt, CPU: 0, Memory: 0}
+		log.Info("%v", serviceMap)
+
+	}
+	return serviceMap
 }
 
 func areVMsCorrect(deployedVMMap ymlparser.VM, realVMMap ymlparser.VM) bool {

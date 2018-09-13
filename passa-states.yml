@@ -18,7 +18,8 @@ provider:
 
 provider:
   name: gce
-  clusterName: testing
+  clusterName: passa-cluster
+
 states:
 - isodate: 2018-08-14T12:54:16.722357636+02:00
   expectedtime: 2018-08-14T12:54:16.722357636+02:00
@@ -49,13 +50,13 @@ states:
   expectedtime: 2018-10-21T12:54:16.722357636+02:00
   name: state-2
   services:
-    relax_web:
+    nginx:
       cpu: 300
       memory: 400
       replicas: 2
   vms:
-    m1.small: 3
-    m1.nano: 4
+    t2.micro: 3
+    t2.large: 4
 
 
 - isodate: 2018-09-09T12:54:16.722357636+02:00
