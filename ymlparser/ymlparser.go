@@ -17,8 +17,8 @@ type Service map[string]ServiceInfo
 
 //ServiceInfo is constraints for kubernetes
 type ServiceInfo struct {
-	CPU      int64
-	Memory   int64
+	CPU      string
+	Memory   string
 	Replicas int
 }
 

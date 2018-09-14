@@ -17,7 +17,7 @@ func SetupServer(sc chan *ymlparser.State) *gin.Engine {
 	r := gin.Default()
 	stateChannel = sc //left: global, right: func param
 
-	r.LoadHTMLGlob(os.Getenv("GOPATH") + "/src/github.com/Cloud-Pie/Passa/server/templates/*") //FIXME: still needs a fix
+	r.LoadHTMLGlob(os.Getenv("GOPATH") + "/src/github.com/Cloud-Pie/Passa/server/templates/*") //FIXME: don't rely on external file
 
 	r.GET("/", func(ctx *gin.Context) {
 

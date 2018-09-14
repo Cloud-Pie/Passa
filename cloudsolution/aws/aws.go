@@ -3,6 +3,7 @@ package aws
 import (
 	"fmt"
 	"io/ioutil"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,8 +18,8 @@ import (
 	"k8s.io/client-go/util/retry"
 )
 
-const scriptFilename = "awsscript.sh"
-const bashCommand = "#!/bin/bash"
+const scriptFilename = "lrzscript.sh"
+const bashCommand = "#!/usr/bin/env bash"
 const deploymentTimeout = 120 * time.Second
 
 var log = logging.MustGetLogger("passa")
@@ -52,7 +53,7 @@ func NewAWSManager(username, password, configFile string, joinCommand string) Lr
 	data := []byte(fmt.Sprintf("%s\n%s", bashCommand, joinCommand))
 	ioutil.WriteFile(scriptFilename, data, 0644)
 
-	nodesList, err := clientset.CoreV1().Nodes().List(metav1.ListOptions{})
+	nodesList, _ := clientset.CoreV1().Nodes().List(metav1.ListOptions{})
 
 	for _, node := range nodesList.Items {
 		for k := range node.GetLabels() {
@@ -171,7 +172,8 @@ func (l Lrz) getServiceCount() ymlparser.Service {
 	currentServices := ymlparser.Service{}
 
 	for _, d := range deploymentList.Items {
-		currentServices[d.Name] = ymlparser.ServiceInfo{Replicas: int(*d.Spec.Replicas), CPU: d.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().Value(), Memory: d.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().Value()}
+
+		currentServices[d.Name] = ymlparser.ServiceInfo{Replicas: int(*d.Spec.Replicas), CPU: d.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().String(), Memory: d.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().String()}
 	}
 
 	return currentServices
@@ -193,8 +195,10 @@ func (l Lrz) scaleContainers(serviceName string, serviceInfo ymlparser.ServiceIn
 		sn := int32(serviceInfo.Replicas)
 		result.Spec.Replicas = &sn
 		//result.Spec.Template.Spec.Containers[0].Args = []string{"-cpus", serviceInfo.CPU}
-		result.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().Set(serviceInfo.Memory)
-		result.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().Set(serviceInfo.CPU)
+		cpuInt64, _ := strconv.ParseInt(serviceInfo.Memory, 10, 64)
+		result.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().Set(cpuInt64)
+		memoryInt64, _ := strconv.ParseInt(serviceInfo.CPU, 10, 64)
+		result.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().Set(memoryInt64)
 
 		_, updateErr := deploymentsClient.Update(result)
 		return updateErr

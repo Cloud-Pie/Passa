@@ -16,16 +16,11 @@ const resizeClusterCommand = "gcloud container clusters  resize %s --node-pool %
 
 var types = []string{"t2.micro", "t2.large"}
 
-/*
-* NOTE: gcloud info --format=json --filter="config.core"
-*	same for kubectl
-*
- */
-const scaleContainersCommand = "kubectl scale deployment %s --replicas %d"
+const scaleContainersCommand = "kubectl scale deployment %s --replicas %d --limits='cpu=%s,memory=%s'"
 
 const getNodesCommand = "kubectl get nodes"
 
-const getDeploymentsCommand = "kubectl get deployments" //TODO: use minikube to test this
+const getDeploymentsCommand = "kubectl get deployments"
 
 const getAccount = "gcloud info --format='value(config.account)'"
 
@@ -94,7 +89,7 @@ func (g GCE) CheckState() bool {
 	return false
 }
 
-func (g GCE) scaleVms(wantedVMs ymlparser.VM) { //TODO:
+func (g GCE) scaleVms(wantedVMs ymlparser.VM) {
 	for t, s := range wantedVMs {
 		t = strings.Replace(t, ".", "-", -1) // For AWS compatibility
 		log.Info("Sending RESIZE command for %s:%d", t, s)
@@ -108,9 +103,10 @@ func (g GCE) scaleContainers(wantedContainers ymlparser.Service) {
 
 	for name, serviceInfo := range wantedContainers {
 		log.Info("Sending SCALE command for %s:%d", name, serviceInfo.Replicas)
-		cmd := fmt.Sprintf(scaleContainersCommand, name, serviceInfo.Replicas)
+		cmd := fmt.Sprintf(scaleContainersCommand, name, serviceInfo.Replicas, serviceInfo.CPU, serviceInfo.Memory)
+
 		fmt.Println(cmd)
-		exec.Command("sh", "-c", cmd).Output() //TODO: modify command for memory & cpu
+		exec.Command("sh", "-c", cmd).Output()
 	}
 }
 
@@ -142,7 +138,7 @@ func (g GCE) getServices() ymlparser.Service {
 		if err != nil {
 			panic(err)
 		}
-		serviceMap[serviceName] = ymlparser.ServiceInfo{Replicas: replicaCountInt, CPU: 0, Memory: 0}
+		serviceMap[serviceName] = ymlparser.ServiceInfo{Replicas: replicaCountInt, CPU: "", Memory: ""}
 		log.Info("%v", serviceMap)
 
 	}

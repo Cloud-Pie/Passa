@@ -118,7 +118,7 @@ func main() {
 //Most important function in the whole project !!
 func schedulerRoutine(stateChannel chan *ymlparser.State, cm cloudsolution.CloudManagerInterface) {
 	for incomingState := range stateChannel {
-		if time.Now().After(incomingState.ISODate) { //FIXME: remove && false
+		if time.Now().After(incomingState.ISODate) {
 			log.Notice("%s is a past state, not deploying\n", incomingState.Name)
 			database.InsertState(*incomingState)
 		} else {
@@ -210,8 +210,4 @@ func styleEntry() {
 	|  |     /  _____  \  .----)   |   .----)   |    /  _____  \
 	| _|    /__/     \__\ |_______/    |_______/    /__/     \__\
 	`)
-}
-
-func checkForExternalTool(toolname string) {
-	//TODO: check whether awscli or euca2ools exists in path
 }
