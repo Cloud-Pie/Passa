@@ -1,3 +1,6 @@
+package server
+
+const serverTemplate = `
 
 <!DOCTYPE HTML>
 <html>
@@ -135,3 +138,5 @@ getStates()
 
 </body>
 </html>
+
+`

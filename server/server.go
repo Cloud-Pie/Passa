@@ -2,7 +2,7 @@ package server
 
 import (
 	"fmt"
-	"os"
+	"net/http"
 	"time"
 
 	"github.com/Cloud-Pie/Passa/database"
@@ -17,8 +17,6 @@ func SetupServer(sc chan *ymlparser.State) *gin.Engine {
 	r := gin.Default()
 	stateChannel = sc //left: global, right: func param
 
-	r.LoadHTMLGlob(os.Getenv("GOPATH") + "/src/github.com/Cloud-Pie/Passa/server/templates/*") //FIXME: don't rely on external file
-
 	r.GET("/", func(ctx *gin.Context) {
 
 		ctx.JSON(200, r.Routes())
@@ -26,7 +24,7 @@ func SetupServer(sc chan *ymlparser.State) *gin.Engine {
 
 	r.GET("/ui/timeline", func(ctx *gin.Context) {
 
-		ctx.HTML(200, "timeline.html", database.ReadAllStates())
+		ctx.Data(http.StatusOK, "text/html; charset=utf-8", []byte(serverTemplate))
 		/*ctx.JSON(200, gin.H{
 			"timeline": "Not working will be fixed in v1.1",
 		})
@@ -55,8 +53,8 @@ func SetupServer(sc chan *ymlparser.State) *gin.Engine {
 
 func createState(c *gin.Context) {
 	var newState ymlparser.State
-	c.BindJSON(&newState)
-
+	err := c.BindJSON(&newState)
+	fmt.Println(err)
 	if newState.ISODate.IsZero() || newState.Services == nil { //input validation
 		c.JSON(422, gin.H{
 			"error": "Time or service field is empty",

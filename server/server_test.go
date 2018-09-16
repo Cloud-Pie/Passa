@@ -64,9 +64,13 @@ func Test_createState(t *testing.T) {
 		{
 			name: "Valid State",
 			stateToUpdate: ymlparser.State{
-				ISODate:  time.Now(),
-				Name:     "state-with-6",
-				Services: append([]ymlparser.Service{}, ymlparser.Service{Name: "test-service", Scale: 10}),
+				ISODate: time.Now(),
+				Name:    "state-with-6",
+				Services: ymlparser.Service{
+					"test-service": ymlparser.ServiceInfo{
+						Replicas: 10,
+					},
+				},
 			},
 			returnedCode: 200,
 		},
