@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/Cloud-Pie/Passa/cloudsolution"
 	"github.com/Cloud-Pie/Passa/ymlparser"
@@ -90,13 +91,19 @@ func (g GCE) CheckState() bool {
 }
 
 func (g GCE) scaleVms(wantedVMs ymlparser.VM) {
+	var wg sync.WaitGroup
+	wg.Add(len(wantedVMs))
 	for t, s := range wantedVMs {
-		t = strings.Replace(t, ".", "-", -1) // For AWS compatibility
-		log.Info("Sending RESIZE command for %s:%d", t, s)
-		cmd := fmt.Sprintf(resizeClusterCommand, g.clusterName, t, s)
-		fmt.Println(cmd)
-		exec.Command("sh", "-c", cmd).Output()
+		go func() {
+			t = strings.Replace(t, ".", "-", -1) // For AWS compatibility
+			log.Info("Sending RESIZE command for %s:%d", t, s)
+			cmd := fmt.Sprintf(resizeClusterCommand, g.clusterName, t, s)
+			fmt.Println(cmd)
+			exec.Command("sh", "-c", cmd).Output()
+			wg.Done()
+		}()
 	}
+	wg.Wait()
 }
 
 func (g GCE) scaleContainers(wantedContainers ymlparser.Service) {
