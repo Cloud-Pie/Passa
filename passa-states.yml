@@ -83,3 +83,14 @@ states:
   vms:
     m1.small: 3
     m1.nano: 4
+
+- isodate: 2018-10-21T12:54:16.722357636+02:00
+  name: mockState
+  services:
+    nginx:
+      cpu: 1
+      memory: 2
+      replicas: 2
+  vms:
+    t2.micro: 3
+    t2.large: 4

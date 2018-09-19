@@ -10,10 +10,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/Cloud-Pie/Passa/cloudsolution/aws"
 	"github.com/Cloud-Pie/Passa/cloudsolution/dockerswarm"
+	"github.com/Cloud-Pie/Passa/cloudsolution/fakecloud"
 	"github.com/Cloud-Pie/Passa/cloudsolution/gce"
 	"github.com/Cloud-Pie/Passa/cloudsolution/lrz"
+
 	"github.com/Cloud-Pie/Passa/database"
 
 	"github.com/Cloud-Pie/Passa/cloudsolution"
@@ -74,11 +75,11 @@ func main() {
 			cloudManager = dockerswarm.NewSwarmManager(c.Provider.ManagerIP)
 		} else if c.Provider.Name == "lrz" {
 			cloudManager = lrz.NewLRZManager(c.Provider.Username, c.Provider.Password, c.Provider.ConfigFile, c.Provider.JoinCommand)
-		} else if c.Provider.Name == "aws" {
-			cloudManager = aws.NewAWSManager(c.Provider.Username, c.Provider.Password, c.Provider.ConfigFile, c.Provider.JoinCommand)
 		} else if c.Provider.Name == "gce" {
 			cloudManager = gce.NewGCEManager(c.Provider.ClusterName)
 		}
+	} else {
+		cloudManager = fakecloud.NewMockCloudManager(c.States[len(c.States)-1])
 	}
 
 	go schedulerRoutine(stateChannel, cloudManager) //Most important line in whole project

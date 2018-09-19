@@ -24,7 +24,7 @@ func main() {
 	}
 	currentTime := time.Now()
 
-	addedMinutes := [5]int{-2, 10, 15, 20, 25} //Constant
+	addedMinutes := [6]int{-2, 10, 15, 20, 25, 30} //Constant
 
 	for idx := range c.States {
 		timein := currentTime.Local().Add(time.Hour * 24 * 30 * time.Duration(addedMinutes[idx]))
