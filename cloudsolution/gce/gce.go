@@ -5,7 +5,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/Cloud-Pie/Passa/cloudsolution"
 	"github.com/Cloud-Pie/Passa/ymlparser"
@@ -17,7 +16,7 @@ const resizeClusterCommand = "gcloud container clusters  resize %s --node-pool %
 
 var types = []string{"t2.micro", "t2.large"}
 
-const scaleContainersCommand = "kubectl scale deployment %s --replicas %d --limits='cpu=%s,memory=%s'"
+const scaleContainersCommand = "kubectl scale deployment %s --replicas %d "
 
 const getNodesCommand = "kubectl get nodes"
 
@@ -91,26 +90,21 @@ func (g GCE) CheckState() bool {
 }
 
 func (g GCE) scaleVms(wantedVMs ymlparser.VM) {
-	var wg sync.WaitGroup
-	wg.Add(len(wantedVMs))
+
 	for t, s := range wantedVMs {
-		go func() {
-			t = strings.Replace(t, ".", "-", -1) // For AWS compatibility
-			log.Info("Sending RESIZE command for %s:%d", t, s)
-			cmd := fmt.Sprintf(resizeClusterCommand, g.clusterName, t, s)
-			fmt.Println(cmd)
-			exec.Command("sh", "-c", cmd).Output()
-			wg.Done()
-		}()
+		t = strings.Replace(t, ".", "-", -1) // For AWS compatibility
+		log.Info("Sending RESIZE command for %s:%d", t, s)
+		cmd := fmt.Sprintf(resizeClusterCommand, g.clusterName, t, s)
+		fmt.Println(cmd)
+		exec.Command("sh", "-c", cmd).Output()
 	}
-	wg.Wait()
 }
 
 func (g GCE) scaleContainers(wantedContainers ymlparser.Service) {
 
 	for name, serviceInfo := range wantedContainers {
 		log.Info("Sending SCALE command for %s:%d", name, serviceInfo.Replicas)
-		cmd := fmt.Sprintf(scaleContainersCommand, name, serviceInfo.Replicas, serviceInfo.CPU, serviceInfo.Memory)
+		cmd := fmt.Sprintf(scaleContainersCommand, name, serviceInfo.Replicas)
 
 		fmt.Println(cmd)
 		exec.Command("sh", "-c", cmd).Output()

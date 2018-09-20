@@ -18,7 +18,7 @@ provider:
 
 provider:
   name: gce
-  clusterName: passa-cluster
+  clusterName: hpa-cluster
 
 states:
 - isodate: 2018-08-14T12:54:16.722357636+02:00
