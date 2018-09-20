@@ -139,7 +139,7 @@ func (g GCE) getServices() ymlparser.Service {
 		if err != nil {
 			panic(err)
 		}
-		serviceMap[serviceName] = ymlparser.ServiceInfo{Replicas: replicaCountInt, CPU: 0, Memory: 0}
+		serviceMap[serviceName] = ymlparser.ServiceInfo{Replicas: replicaCountInt, CPU: "", Memory: 0}
 		log.Info("%v", serviceMap)
 
 	}

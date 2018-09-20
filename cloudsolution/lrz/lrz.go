@@ -173,7 +173,9 @@ func (l Lrz) getServiceCount() ymlparser.Service {
 
 	for _, d := range deploymentList.Items {
 
-		currentServices[d.Name] = ymlparser.ServiceInfo{Replicas: int(*d.Spec.Replicas), CPU: d.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().String(), Memory: d.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().String()}
+		currentServices[d.Name] = ymlparser.ServiceInfo{Replicas: int(*d.Spec.Replicas),
+			CPU:    d.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().String(),
+			Memory: d.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().MilliValue()}
 	}
 
 	return currentServices
@@ -195,8 +197,8 @@ func (l Lrz) scaleContainers(serviceName string, serviceInfo ymlparser.ServiceIn
 		sn := int32(serviceInfo.Replicas)
 		result.Spec.Replicas = &sn
 		//result.Spec.Template.Spec.Containers[0].Args = []string{"-cpus", serviceInfo.CPU}
-		cpuInt64, _ := strconv.ParseInt(serviceInfo.Memory, 10, 64)
-		result.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().Set(cpuInt64)
+
+		result.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().Set(serviceInfo.Memory)
 		memoryInt64, _ := strconv.ParseInt(serviceInfo.CPU, 10, 64)
 		result.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().Set(memoryInt64)
 
