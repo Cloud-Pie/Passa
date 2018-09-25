@@ -84,13 +84,13 @@ states:
     m1.small: 3
     m1.nano: 4
 
-- isodate: 2018-10-21T12:54:16.722357636+02:00
-  name: mockState
+- isodate: 2018-10-21T09:20:16.722357636+02:00
+  name: Scaling-State
   services:
     nginx:
-      cpu: 1
-      memory: 2
-      replicas: 2
+      cpu: 100mi
+      memory: 2000000000
+      replicas: 20
   vms:
     t2.micro: 3
     t2.large: 4
