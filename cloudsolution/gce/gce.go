@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Cloud-Pie/Passa/cloudsolution"
 	"github.com/Cloud-Pie/Passa/ymlparser"
@@ -13,14 +13,16 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	//gcp =>to provide gke Authentication
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
-	"k8s.io/client-go/util/retry"
 )
 
 //gcloud container clusters resize [CLUSTER_NAME] --node-pool [POOL_NAME] --size [SIZE]
 const resizeClusterCommand = "gcloud container clusters  resize %s --node-pool %s --size %d -q"
+const patchCommand = `kubectl patch deployment movieapp  --type json -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/resources/limits/memory", "value":"%d"},{"op": "replace", "path": "/spec/template/spec/containers/0/resources/limits/cpu", "value":"%s"}]'`
+const scaleCommand = "kubectl scale deployment movieapp --replicas %d"
 
 var types = []string{"t2.micro", "t2.large"}
 
@@ -77,6 +79,7 @@ func (g GCE) ChangeState(wantedState ymlparser.State) cloudsolution.CloudManager
 	g.scaleContainers(wantedState.Services)
 
 	g.lastDeployedState = wantedState
+	g.lastDeployedState.RealTime = time.Now()
 	return g
 }
 
@@ -116,35 +119,16 @@ func (g GCE) scaleContainers(wantedContainers ymlparser.Service) string {
 
 	for serviceName := range wantedContainers {
 		log.Info("Updating Services...")
-		deploymentsClient := g.kube.AppsV1().Deployments(apiv1.NamespaceDefault)
-		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			// Retrieve the latest version of Deployment before attempting update
-			// RetryOnConflict uses exponential backoff to avoid exhausting the apiserver
-			result, getErr := deploymentsClient.Get(serviceName, metav1.GetOptions{})
-			if getErr != nil {
-				log.Critical("Failed to get latest version of Deployment: %v", getErr)
+		pc := fmt.Sprintf(patchCommand, wantedContainers[serviceName].Memory, wantedContainers[serviceName].CPU)
+		fmt.Println(pc)
+		_, err := exec.Command("sh", "-c", pc).Output() //pc -> patch command
+		fmt.Println(err)
 
-			}
+		command := fmt.Sprintf(scaleCommand, wantedContainers[serviceName].Replicas)
 
-			sn := int32(wantedContainers[serviceName].Replicas)
-			result.Spec.Replicas = &sn
-			//result.Spec.Template.Spec.Containers[0].Args = []string{"-cpus", serviceInfo.CPU}
-
-			result.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().Set(wantedContainers[serviceName].Memory)
-			cpuInt64, _ := strconv.ParseInt(wantedContainers[serviceName].CPU, 10, 64)
-			result.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().Set(cpuInt64)
-
-			//kubectl patch deployment movieapp  --type json -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/resources/limits/memory", "value":"12312321313213"}]' --type json -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/resources/limits/cpu", "value":"200m"}]'
-
-			//fmt.Println(cp.String())
-			_, updateErr := deploymentsClient.Update(result)
-
-			return updateErr
-		})
-		if retryErr != nil {
-			log.Critical("Update failed: %v", retryErr)
-		}
-		log.Notice("Updated deployment...")
+		_, err = exec.Command("sh", "-c", command).Output()
+		fmt.Println(err)
+		//kubectl scale deployment movieapp --replicas 4
 	}
 	return ""
 }
@@ -197,7 +181,7 @@ func areVMsCorrect(deployedVMMap ymlparser.VM, realVMMap ymlparser.VM) bool {
 func areServicesCorrect(deployedServicesMap ymlparser.Service, realServicesMap ymlparser.Service) bool {
 
 	for key := range deployedServicesMap {
-		if deployedServicesMap[key] != realServicesMap[key] {
+		if deployedServicesMap[key].Replicas != realServicesMap[key].Replicas { //FIXME: checks only state
 			return false
 		}
 	}
