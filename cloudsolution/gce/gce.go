@@ -21,8 +21,8 @@ import (
 
 //gcloud container clusters resize [CLUSTER_NAME] --node-pool [POOL_NAME] --size [SIZE]
 const resizeClusterCommand = "gcloud container clusters  resize %s --node-pool %s --size %d -q"
-const patchCommand = `kubectl patch deployment movieapp  --type json -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/resources/limits/memory", "value":"%d"},{"op": "replace", "path": "/spec/template/spec/containers/0/resources/limits/cpu", "value":"%s"}]'`
-const scaleCommand = "kubectl scale deployment movieapp --replicas %d"
+const patchCommand = `kubectl patch deployment %s  --type json -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/resources/limits/memory", "value":"%d"},{"op": "replace", "path": "/spec/template/spec/containers/0/resources/limits/cpu", "value":"%s"}]'`
+const scaleCommand = "kubectl scale deployment %s --replicas %d"
 
 var types = []string{"t2.micro", "t2.large"}
 
@@ -119,12 +119,12 @@ func (g GCE) scaleContainers(wantedContainers ymlparser.Service) string {
 
 	for serviceName := range wantedContainers {
 		log.Info("Updating Services...")
-		pc := fmt.Sprintf(patchCommand, wantedContainers[serviceName].Memory, wantedContainers[serviceName].CPU)
+		pc := fmt.Sprintf(patchCommand, serviceName, wantedContainers[serviceName].Memory, wantedContainers[serviceName].CPU)
 		fmt.Println(pc)
 		_, err := exec.Command("sh", "-c", pc).Output() //pc -> patch command
 		fmt.Println(err)
 
-		command := fmt.Sprintf(scaleCommand, wantedContainers[serviceName].Replicas)
+		command := fmt.Sprintf(scaleCommand, serviceName, wantedContainers[serviceName].Replicas)
 
 		_, err = exec.Command("sh", "-c", command).Output()
 		fmt.Println(err)
@@ -181,7 +181,7 @@ func areVMsCorrect(deployedVMMap ymlparser.VM, realVMMap ymlparser.VM) bool {
 func areServicesCorrect(deployedServicesMap ymlparser.Service, realServicesMap ymlparser.Service) bool {
 
 	for key := range deployedServicesMap {
-		if deployedServicesMap[key].Replicas != realServicesMap[key].Replicas { //FIXME: checks only state
+		if deployedServicesMap[key].Replicas != realServicesMap[key].Replicas { //FIXME: checks only replica count
 			return false
 		}
 	}
