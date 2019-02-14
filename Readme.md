@@ -1,4 +1,6 @@
 # PASSA
+[![Go Report Card](https://goreportcard.com/badge/github.com/Cloud-Pie/Passa)](https://goreportcard.com/report/github.com/Cloud-Pie/Passa)
+
 Predictive Auto Scaling Scheduler Application
 
 ![Passa in Action](./passa_pic.png)
